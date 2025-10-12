@@ -620,37 +620,35 @@ class LetterExtractor {
         if (!this.templateRectangle) {
             console.log('🎯 Configurando primer rectángulo como template...');
             
-            // Esperar un frame para que el objeto esté completamente inicializado
-            setTimeout(() => {
-                this.templateRectangle = rect;
-                this.detectImageOrientation();
-                
-                // SOLO cambiar apariencia visual, NO tocar propiedades de interacción
-                rect.set({
-                    stroke: '#28a745',
-                    strokeWidth: 3,
-                    fill: 'rgba(40, 167, 69, 0.2)'
-                });
-                
-                // Marcar como template con una propiedad personalizada
-                rect.isTemplate = true;
-                
-                // FORZAR re-renderizado
-                this.canvas.renderAll();
-                
-                // Debug: verificar que las propiedades se mantuvieron
-                console.log('✅ Template configurado - Propiedades finales:', {
-                    selectable: rect.selectable,
-                    evented: rect.evented,
-                    hasControls: rect.hasControls,
-                    hasBorders: rect.hasBorders,
-                    moveable: rect.moveable,
-                    isTemplate: rect.isTemplate
-                });
-                
-                this.updateTemplateInfo();
-                this.showMessage(`Template establecido: ${rect.customName}`, 'success');
-            }, 50); // Delay mínimo pero suficiente
+            // Establecer template INMEDIATAMENTE, no en setTimeout
+            this.templateRectangle = rect;
+            this.detectImageOrientation();
+            
+            // SOLO cambiar apariencia visual, NO tocar propiedades de interacción
+            rect.set({
+                stroke: '#28a745',
+                strokeWidth: 3,
+                fill: 'rgba(40, 167, 69, 0.2)'
+            });
+            
+            // Marcar como template con una propiedad personalizada
+            rect.isTemplate = true;
+            
+            // FORZAR re-renderizado
+            this.canvas.renderAll();
+            
+            // Debug: verificar que las propiedades se mantuvieron
+            console.log('✅ Template configurado - Propiedades finales:', {
+                selectable: rect.selectable,
+                evented: rect.evented,
+                hasControls: rect.hasControls,
+                hasBorders: rect.hasBorders,
+                moveable: rect.moveable,
+                isTemplate: rect.isTemplate
+            });
+            
+            this.updateTemplateInfo();
+            this.showMessage(`Template establecido: ${rect.customName}`, 'success');
         }
         
         // Forzar selección del nuevo rectángulo
