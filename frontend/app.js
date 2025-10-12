@@ -542,8 +542,8 @@ class LetterExtractor {
             top: top,
             width: width,
             height: height,
-            fill: 'rgba(255, 0, 0, 0.3)', // Rojo para debug - más visible
-            stroke: '#ff0000',
+            fill: this.rectCounter === 1 ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 0, 0.3)', // Cyan para el primero, verde para los demás
+            stroke: this.rectCounter === 1 ? '#00ffff' : '#00ff00', // Cyan para el primero, verde para los demás
             strokeWidth: 3,
             cornerSize: 12,
             // Propiedades básicas de interacción
@@ -573,7 +573,7 @@ class LetterExtractor {
             this.detectImageOrientation();
             
             // Solo cambiar el color, NO las propiedades de interacción
-            rect.stroke = '#28a745'; // Verde para indicar que es template
+            rect.stroke = '#00ffff'; // Cyan para indicar que es template y primera letra
             rect.strokeWidth = 3;
             
             this.updateTemplateInfo();
