@@ -547,10 +547,19 @@ class LetterExtractor {
             const imageWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
             const imageHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
             
+            console.log(`🔍 DEBUG Grid calculation for rect ${this.rectCounter}:`);
+            console.log(`   Template position: (${startX}, ${startY})`);
+            console.log(`   Template size: ${width} x ${height}`);
+            console.log(`   Image size: ${imageWidth} x ${imageHeight}`);
+            
             // Calcular cuántos rectángulos caben por fila
             const rectWithSpacing = width + spacing;
             const availableWidth = imageWidth - startX - width; // Espacio disponible desde el template
-            const maxRectsPerRow = Math.floor(availableWidth / rectWithSpacing) + 1; // +1 incluye el template
+            const maxRectsPerRow = Math.max(1, Math.floor(availableWidth / rectWithSpacing) + 1); // +1 incluye el template, mínimo 1
+            
+            console.log(`   Available width: ${availableWidth}`);
+            console.log(`   Rect with spacing: ${rectWithSpacing}`);
+            console.log(`   Max rects per row: ${maxRectsPerRow}`);
             
             // Calcular posición en grid (índice empieza en 0 para el template, 1 para el segundo rectángulo)
             const gridIndex = this.rectCounter - 1; // Índice del rectángulo actual (template es 0)
@@ -561,7 +570,15 @@ class LetterExtractor {
             left = startX + col * rectWithSpacing;
             top = startY + row * (height + spacing);
             
-            console.log(`📐 Grid positioning: rect ${this.rectCounter}, grid(${row},${col}), pos(${Math.round(left)},${Math.round(top)}), maxPerRow=${maxRectsPerRow}`);
+            console.log(`📐 Grid positioning: rect ${this.rectCounter}, gridIndex=${gridIndex}, grid(${row},${col}), pos(${Math.round(left)},${Math.round(top)})`);
+            
+            // Verificar si está fuera de los límites
+            if (left + width > imageWidth) {
+                console.warn(`⚠️  Rectangle would be outside image bounds! left+width=${left + width} > imageWidth=${imageWidth}`);
+            }
+            if (top + height > imageHeight) {
+                console.warn(`⚠️  Rectangle would be outside image bounds! top+height=${top + height} > imageHeight=${imageHeight}`);
+            }
         }
         
         const rect = new fabric.Rect({
@@ -646,7 +663,7 @@ class LetterExtractor {
         this.handleSelection(rect);
         
         // Debug log detallado
-        console.log(`✅ Rectángulo creado: ${letterName}`, {
+        console.log(`✅ Rectángulo creado: ${letterName} en (${Math.round(left)}, ${Math.round(top)}) - ${Math.round(width)}x${Math.round(height)}`, {
             position: { left, top },
             size: { width, height },
             properties: {
