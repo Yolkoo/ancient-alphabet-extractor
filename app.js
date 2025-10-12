@@ -954,8 +954,12 @@ class LetterExtractor {
         // Mostrar información del template actualizada
         this.showMessage(`Template actualizado: ${width} × ${height} px`, 'info');
         
-        // Actualizar la información del template en la interfaz
-        this.updateTemplateInfo();
+        // Usar un debounce para actualizar la información del template
+        // Solo actualizar después de que termine la interacción
+        clearTimeout(this.templateUpdateTimeout);
+        this.templateUpdateTimeout = setTimeout(() => {
+            this.updateTemplateInfo();
+        }, 100);
     }
 
     updateTemplateInfo() {
@@ -979,24 +983,37 @@ class LetterExtractor {
             templateInfo.className = 'template-info';
             
             const sidebar = document.querySelector('.controls-sidebar');
-            const generateBtn = document.getElementById('generateGridBtn');
-            if (generateBtn && sidebar) {
-                sidebar.insertBefore(templateInfo, generateBtn);
-            } else if (sidebar) {
-                // Si no hay botón de grid, agregar al final de la sidebar
-                sidebar.appendChild(templateInfo);
+            if (sidebar) {
+                // Buscar un lugar apropiado para insertar
+                const generateBtn = document.getElementById('generateGridBtn');
+                
+                // Verificar que generateBtn sea hijo directo de sidebar antes de insertBefore
+                if (generateBtn && sidebar.contains(generateBtn) && generateBtn.parentNode === sidebar) {
+                    try {
+                        sidebar.insertBefore(templateInfo, generateBtn);
+                    } catch (error) {
+                        console.warn('Error insertBefore, usando appendChild:', error);
+                        sidebar.appendChild(templateInfo);
+                    }
+                } else {
+                    // Si no hay botón de grid o no es hijo directo, agregar al final de la sidebar
+                    sidebar.appendChild(templateInfo);
+                }
             }
         }
         
-        templateInfo.innerHTML = `
-            <div class="template-status">
-                <span class="template-icon">📏</span>
-                <div class="template-details">
-                    <div class="template-title">Template Activo</div>
-                    <div class="template-size">${width} × ${height} px</div>
+        // Actualizar el contenido solo si el elemento existe y está en el DOM
+        if (templateInfo && templateInfo.parentNode) {
+            templateInfo.innerHTML = `
+                <div class="template-status">
+                    <span class="template-icon">📏</span>
+                    <div class="template-details">
+                        <div class="template-title">Template Activo</div>
+                        <div class="template-size">${width} × ${height} px</div>
+                    </div>
                 </div>
-            </div>
-        `;
+            `;
+        }
     }
 
     updateRectanglesList() {
