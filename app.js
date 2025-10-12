@@ -199,6 +199,15 @@ class LetterExtractor {
         document.getElementById('suffixInput').addEventListener('input', () => {
             this.updateAutoPrefix();
         });
+
+        // Debug buttons (temporal)
+        document.getElementById('debugRectsBtn').addEventListener('click', () => {
+            this.debugAllRectangles();
+        });
+
+        document.getElementById('fixTemplateBtn').addEventListener('click', () => {
+            this.fixTemplateInteractivity();
+        });
     }
 
     setupCanvasEvents() {
@@ -546,12 +555,20 @@ class LetterExtractor {
             stroke: '#ff0000',
             strokeWidth: 3,
             cornerSize: 12,
-            // Propiedades básicas de interacción
+            // PROPIEDADES CRÍTICAS DE INTERACCIÓN - FORZAR VALORES
             selectable: true,
             evented: true,
             hasControls: true,
             hasBorders: true,
-            hasRotatingPoint: false
+            hasRotatingPoint: true,
+            lockRotation: false,
+            moveable: true,
+            // Propiedades adicionales para asegurar interacción
+            hoverCursor: 'move',
+            moveCursor: 'move',
+            transparentCorners: false,
+            cornerColor: '#fff',
+            cornerStyle: 'rect'
         });
 
         // Añadir datos personalizados
@@ -562,45 +579,67 @@ class LetterExtractor {
         });
 
         this.canvas.add(rect);
-        this.canvas.setActiveObject(rect);
-        this.canvas.renderAll();
-
         this.rectangles.push(rect);
         
-        // Si es el primer rectángulo, establecerlo como template SIN llamar a setAsTemplate
+        // Si es el primer rectángulo, configurarlo como template DESPUÉS de agregarlo al canvas
         if (!this.templateRectangle) {
-            this.templateRectangle = rect;
-            this.detectImageOrientation();
+            console.log('🎯 Configurando primer rectángulo como template...');
             
-            // Solo cambiar el color, NO las propiedades de interacción
-            rect.stroke = '#28a745'; // Verde para indicar que es template
-            rect.strokeWidth = 3;
-            
-            this.updateTemplateInfo();
-            console.log('✅ Template establecido SIN setAsTemplate - Manteniendo interactividad');
+            // Esperar un frame para que el objeto esté completamente inicializado
+            setTimeout(() => {
+                this.templateRectangle = rect;
+                this.detectImageOrientation();
+                
+                // SOLO cambiar apariencia visual, NO tocar propiedades de interacción
+                rect.set({
+                    stroke: '#28a745',
+                    strokeWidth: 3,
+                    fill: 'rgba(40, 167, 69, 0.2)'
+                });
+                
+                // Marcar como template con una propiedad personalizada
+                rect.isTemplate = true;
+                
+                // FORZAR re-renderizado
+                this.canvas.renderAll();
+                
+                // Debug: verificar que las propiedades se mantuvieron
+                console.log('✅ Template configurado - Propiedades finales:', {
+                    selectable: rect.selectable,
+                    evented: rect.evented,
+                    hasControls: rect.hasControls,
+                    hasBorders: rect.hasBorders,
+                    moveable: rect.moveable,
+                    isTemplate: rect.isTemplate
+                });
+                
+                this.updateTemplateInfo();
+                this.showMessage(`Template establecido: ${rect.customName}`, 'success');
+            }, 50); // Delay mínimo pero suficiente
         }
+        
+        // Forzar selección del nuevo rectángulo
+        setTimeout(() => {
+            this.canvas.setActiveObject(rect);
+            this.canvas.renderAll();
+        }, 100);
         
         this.updateRectanglesList();
         this.handleSelection(rect);
         
-        // Debug log
-        console.log(`✅ Rectángulo creado: ${letterName} en (${left}, ${top}) - ${width}x${height}`);
-        console.log('🔍 Propiedades del rectángulo:', {
-            selectable: rect.selectable,
-            evented: rect.evented,
-            hasControls: rect.hasControls,
-            moveable: rect.moveable,
-            lockRotation: rect.lockRotation
+        // Debug log detallado
+        console.log(`✅ Rectángulo creado: ${letterName}`, {
+            position: { left, top },
+            size: { width, height },
+            properties: {
+                selectable: rect.selectable,
+                evented: rect.evented,
+                hasControls: rect.hasControls,
+                moveable: rect.moveable
+            }
         });
         
-        this.showMessage(`Rectángulo "${letterName}" añadido - Puedes moverlo y redimensionarlo`, 'success');
-        
-        // Test: forzar selección después de un momento
-        setTimeout(() => {
-            this.canvas.setActiveObject(rect);
-            this.canvas.renderAll();
-            console.log('🎯 Rectángulo seleccionado automáticamente para test');
-        }, 100);
+        this.showMessage(`Rectángulo "${letterName}" añadido`, 'success');
     }
 
     deleteSelected() {
@@ -1216,6 +1255,144 @@ class LetterExtractor {
                 }
             }, 5000);
         }
+    }
+
+    // Función de debug: Analizar todos los rectángulos
+    debugAllRectangles() {
+        console.log('🔍 DEBUG: Analizando todos los rectángulos...');
+        console.log('📊 Canvas info:', {
+            selection: this.canvas.selection,
+            interactive: this.canvas.interactive,
+            totalObjects: this.canvas.getObjects().length,
+            rectangles: this.rectangles.length
+        });
+
+        this.rectangles.forEach((rect, index) => {
+            const isTemplate = rect === this.templateRectangle;
+            console.log(`📋 Rectángulo ${index + 1}${isTemplate ? ' (TEMPLATE)' : ''}:`, {
+                name: rect.customName,
+                selectable: rect.selectable,
+                evented: rect.evented,
+                hasControls: rect.hasControls,
+                hasBorders: rect.hasBorders,
+                moveable: rect.moveable,
+                lockRotation: rect.lockRotation,
+                isTemplate: rect.isTemplate,
+                position: `(${rect.left}, ${rect.top})`,
+                size: `${rect.width * rect.scaleX}x${rect.height * rect.scaleY}`,
+                stroke: rect.stroke,
+                fill: rect.fill
+            });
+        });
+
+        // Mostrar información en pantalla
+        const problemRects = this.rectangles.filter(rect => 
+            !rect.selectable || !rect.evented || !rect.hasControls
+        );
+
+        if (problemRects.length > 0) {
+            console.log('❌ Rectángulos con problemas encontrados:', problemRects.length);
+            this.showMessage(`⚠️ ${problemRects.length} rectángulos tienen problemas de interactividad`, 'error');
+            document.getElementById('fixTemplateBtn').disabled = false;
+        } else {
+            console.log('✅ Todos los rectángulos están correctamente configurados');
+            this.showMessage('✅ Todos los rectángulos funcionan correctamente', 'success');
+            document.getElementById('fixTemplateBtn').disabled = true;
+        }
+
+        // Test específico del template
+        if (this.templateRectangle) {
+            console.log('🎯 Test específico del template:', {
+                canSelect: this.templateRectangle.selectable,
+                canEvent: this.templateRectangle.evented,
+                hasControls: this.templateRectangle.hasControls,
+                position: this.templateRectangle.getBoundingRect()
+            });
+
+            // Intentar seleccionar el template
+            try {
+                this.canvas.setActiveObject(this.templateRectangle);
+                this.canvas.renderAll();
+                console.log('✅ Template seleccionado exitosamente');
+            } catch (error) {
+                console.log('❌ Error al seleccionar template:', error);
+            }
+        }
+    }
+
+    // Función de debug: Arreglar template
+    fixTemplateInteractivity() {
+        if (!this.templateRectangle) {
+            this.showMessage('❌ No hay template para arreglar', 'error');
+            return;
+        }
+
+        console.log('🔧 Intentando arreglar interactividad del template...');
+        
+        const template = this.templateRectangle;
+        const originalData = {
+            left: template.left,
+            top: template.top,
+            width: template.width * template.scaleX,
+            height: template.height * template.scaleY,
+            customName: template.customName,
+            unicode: template.unicode,
+            id: template.id
+        };
+
+        // Remover el template problemático
+        this.canvas.remove(template);
+        const templateIndex = this.rectangles.indexOf(template);
+
+        // Crear un nuevo rectángulo completamente funcional
+        const newTemplate = new fabric.Rect({
+            left: originalData.left,
+            top: originalData.top,
+            width: originalData.width,
+            height: originalData.height,
+            fill: 'rgba(40, 167, 69, 0.2)',
+            stroke: '#28a745',
+            strokeWidth: 3,
+            cornerSize: 12,
+            // FORZAR todas las propiedades de interacción
+            selectable: true,
+            evented: true,
+            hasControls: true,
+            hasBorders: true,
+            hasRotatingPoint: true,
+            lockRotation: false,
+            moveable: true,
+            hoverCursor: 'move',
+            moveCursor: 'move'
+        });
+
+        // Restaurar datos
+        newTemplate.set({
+            id: originalData.id,
+            customName: originalData.customName,
+            unicode: originalData.unicode,
+            isTemplate: true
+        });
+
+        // Agregar al canvas
+        this.canvas.add(newTemplate);
+        
+        // Actualizar referencias
+        this.templateRectangle = newTemplate;
+        if (templateIndex !== -1) {
+            this.rectangles[templateIndex] = newTemplate;
+        }
+
+        // Seleccionar inmediatamente
+        this.canvas.setActiveObject(newTemplate);
+        this.canvas.renderAll();
+
+        console.log('✅ Template recreado con interactividad completa');
+        this.showMessage('🔧 Template reparado - ¡Ahora debería funcionar!', 'success');
+        
+        // Actualizar UI
+        this.updateRectanglesList();
+        this.updateTemplateInfo();
     }
 
     clearAll() {
