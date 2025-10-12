@@ -516,25 +516,59 @@ class LetterExtractor {
         
         // Usar template del primer rectángulo si existe
         let width = 100, height = 100;
-        // Posicionar de manera inteligente
-        let left = 100 + (this.rectCounter - 1) * 20; // Offset para evitar solapamiento
-        let top = 100 + (this.rectCounter - 1) * 20;
+        let left = 100;
+        let top = 100;
         
         if (this.templateRectangle) {
             width = this.templateRectangle.width * this.templateRectangle.scaleX;
             height = this.templateRectangle.height * this.templateRectangle.scaleY;
             
-            // Posicionar el siguiente rectángulo automáticamente
-            const spacing = 10;
-            if (this.imageOrientation === 'horizontal') {
-                // Colocar horizontalmente
-                left = this.templateRectangle.left + (width + spacing) * (this.rectCounter - 1);
-                top = this.templateRectangle.top;
-            } else {
-                // Colocar verticalmente
-                left = this.templateRectangle.left;
-                top = this.templateRectangle.top + (height + spacing) * (this.rectCounter - 1);
+            // ✅ POSICIONAMIENTO INTELIGENTE 2D - GRID CALCULADO
+            const imgWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
+            const imgHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
+            const imgLeft = this.backgroundImage.left;
+            const imgTop = this.backgroundImage.top;
+            
+            // Espaciado entre rectángulos
+            const horizontalSpacing = 0; // Sin espacio horizontal como pediste
+            const verticalSpacing = 10;   // Mantener espacio vertical
+            
+            const rectWithSpacing = width + horizontalSpacing;
+            const rectHeightWithSpacing = height + verticalSpacing;
+            
+            // Calcular cuántos rectángulos caben por fila
+            const rectsPerRow = Math.floor((imgWidth - width) / rectWithSpacing) + 1;
+            
+            // Calcular posición en grid (empezando desde 0 para el template)
+            const gridIndex = this.rectCounter - 1;
+            const row = Math.floor(gridIndex / rectsPerRow);
+            const col = gridIndex % rectsPerRow;
+            
+            // Posición dentro de la imagen
+            const startX = this.templateRectangle.left;
+            const startY = this.templateRectangle.top;
+            
+            left = startX + col * rectWithSpacing;
+            top = startY + row * rectHeightWithSpacing;
+            
+            // ✅ VERIFICAR QUE NO SE SALGA DE LA IMAGEN
+            const rightEdge = left + width;
+            const bottomEdge = top + height;
+            const imgRightEdge = imgLeft + imgWidth;
+            const imgBottomEdge = imgTop + imgHeight;
+            
+            if (rightEdge > imgRightEdge || bottomEdge > imgBottomEdge) {
+                console.warn(`⚠️ Rectángulo ${this.rectCounter} se sale de la imagen`, {
+                    rect: { left, top, right: rightEdge, bottom: bottomEdge },
+                    image: { left: imgLeft, top: imgTop, right: imgRightEdge, bottom: imgBottomEdge }
+                });
+                
+                // Si se sale, usar posición segura
+                left = Math.min(left, imgRightEdge - width);
+                top = Math.min(top, imgBottomEdge - height);
             }
+            
+            console.log(`📐 Grid pos: fila ${row}, col ${col} → (${left}, ${top})`);
         }
         
         const rect = new fabric.Rect({

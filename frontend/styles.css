@@ -153,11 +153,11 @@ header p {
 }
 
 .btn:hover:not(:disabled) {
-    background: var(--accent-color);
-    color: white;
-    border-color: var(--accent-color);
+    background: #FFD700; /* Amarillo huevo */
+    color: black;
+    border-color: #FFD700;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 122, 204, 0.2);
+    box-shadow: 0 4px 12px rgba(255, 215, 0, 0.3);
 }
 
 .btn:disabled {
