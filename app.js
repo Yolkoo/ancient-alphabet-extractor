@@ -601,21 +601,19 @@ class LetterExtractor {
 
         this.rectangles.push(rect);
         
-        // Si es el primer rectángulo, establecerlo como template de manera simple
+        // Si es el primer rectángulo, solo marcarlo como template sin modificaciones
         if (!this.templateRectangle) {
             this.templateRectangle = rect;
             this.detectImageOrientation();
             this.updateTemplateInfo();
-            console.log('✅ Template establecido - Primera letra completamente editable');
-            
-            // NO modificar ninguna propiedad del rectángulo, mantenerlo exactamente como se creó
+            console.log('✅ Template establecido - Primer rectángulo completamente funcional');
         }
         
         this.updateRectanglesList();
         this.handleSelection(rect);
         
-        console.log(`✅ Rectángulo creado: ${letterName} en (${left}, ${top}) - ${width}x${height}`);
-        this.showMessage(`Rectángulo "${letterName}" añadido - Totalmente editable`, 'success');
+        console.log(`✅ Rectángulo creado: ${letterName} - Posición: (${left}, ${top}) - Tamaño: ${width}x${height}`);
+        this.showMessage(`Rectángulo "${letterName}" añadido - Completamente editable`, 'success');
     }
 
     deleteSelected() {
@@ -836,18 +834,16 @@ class LetterExtractor {
             return;
         }
 
-        console.log(`🔤 Generando ${lettersToGenerate} rectángulos automáticamente...`);
+        console.log(`🔤 Generando ${lettersToGenerate} rectángulos en un solo paso...`);
         
-        // Generar todos los rectángulos de una vez sin clicks individuales
+        // Información del template
         const template = this.templateRectangle;
         const width = template.width * template.scaleX;
         const height = template.height * template.scaleY;
         
-        // Obtener información de la imagen
+        // Información de la imagen
         const imgWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
         const imgHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
-        const imgLeft = this.backgroundImage.left;
-        const imgTop = this.backgroundImage.top;
         
         // Configuración de espaciado
         const horizontalSpacing = 0;
@@ -856,7 +852,7 @@ class LetterExtractor {
         const rectHeightWithSpacing = height + verticalSpacing;
         const rectsPerRow = Math.floor((imgWidth - width) / rectWithSpacing) + 1;
         
-        // Generar todos los rectángulos restantes
+        // Crear todos los rectángulos de una vez
         for (let i = 0; i < lettersToGenerate; i++) {
             this.rectCounter++;
             const letterName = this.getNextLetterName();
@@ -869,22 +865,13 @@ class LetterExtractor {
             const left = template.left + col * rectWithSpacing;
             const top = template.top + row * rectHeightWithSpacing;
             
-            // Verificar que no se salga de la imagen
-            const rightEdge = left + width;
-            const bottomEdge = top + height;
-            const imgRightEdge = imgLeft + imgWidth;
-            const imgBottomEdge = imgTop + imgHeight;
-            
-            const finalLeft = Math.min(left, imgRightEdge - width);
-            const finalTop = Math.min(top, imgBottomEdge - height);
-            
-            // Crear rectángulo
+            // Crear rectángulo directamente sin llamar addRectangle
             const rect = new fabric.Rect({
-                left: finalLeft,
-                top: finalTop,
+                left: left,
+                top: top,
                 width: width,
                 height: height,
-                fill: 'rgba(0, 255, 0, 0.3)', // Verde para rectángulos generados
+                fill: 'rgba(0, 255, 0, 0.3)', // Verde para rectángulos del grid
                 stroke: '#00ff00', // Verde
                 strokeWidth: 3,
                 cornerSize: 12,
@@ -895,7 +882,7 @@ class LetterExtractor {
                 hasRotatingPoint: false
             });
 
-            // Configurar datos
+            // Configurar datos del rectángulo
             rect.set({
                 id: `letter_${this.rectCounter}`,
                 customName: letterName,
@@ -909,7 +896,7 @@ class LetterExtractor {
         this.canvas.renderAll();
         this.updateRectanglesList();
         
-        alert(`✅ Grid generado automáticamente: ${this.rectangles.length} rectángulos total`);
+        alert(`✅ Grid generado: ${this.rectangles.length} rectángulos total (${lettersToGenerate} nuevos)`);
         console.log(`✅ Grid completo: ${this.rectangles.length} rectángulos creados`);
     }
 
