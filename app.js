@@ -1127,10 +1127,12 @@ class LetterExtractor {
             return;
         }
 
+        // Declarar originalText fuera del try-catch para que esté disponible en finally
+        const processBtn = document.getElementById('processImageBtn');
+        const originalText = processBtn.textContent;
+
         try {
             // Deshabilitar botón mientras procesa
-            const processBtn = document.getElementById('processImageBtn');
-            const originalText = processBtn.textContent;
             processBtn.textContent = '⏳ Procesando...';
             processBtn.disabled = true;
 
@@ -1199,7 +1201,6 @@ class LetterExtractor {
             alert('Error al procesar la imagen: ' + error.message);
         } finally {
             // Restaurar botón
-            const processBtn = document.getElementById('processImageBtn');
             processBtn.textContent = originalText;
             processBtn.disabled = false;
         }
