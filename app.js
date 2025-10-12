@@ -1049,31 +1049,6 @@ class LetterExtractor {
             return;
         }
 
-        const formData = new FormData();
-        formData.append('image', imageInput.files[0]);
-        
-        // Añadir datos de las regiones
-        const regionsData = {
-            imageInfo: {
-                width: this.canvas.width,
-                height: this.canvas.height,
-                originalWidth: this.backgroundImage.width / this.backgroundImage.scaleX,
-                originalHeight: this.backgroundImage.height / this.backgroundImage.scaleY
-            },
-            regions: this.rectangles.map((rect, index) => ({
-                id: rect.id || `rect_${index + 1}`,
-                name: rect.customName || `Región ${index + 1}`,
-                coordinates: {
-                    x: Math.round(rect.left),
-                    y: Math.round(rect.top),
-                    width: Math.round(rect.width * rect.scaleX),
-                    height: Math.round(rect.height * rect.scaleY)
-                }
-            }))
-        };
-        
-        formData.append('regions', JSON.stringify(regionsData));
-
         try {
             // Deshabilitar botón mientras procesa
             const processBtn = document.getElementById('processImageBtn');
@@ -1081,35 +1056,165 @@ class LetterExtractor {
             processBtn.textContent = '⏳ Procesando...';
             processBtn.disabled = true;
 
-            const response = await fetch('http://localhost:5004/process', {
-                method: 'POST',
-                body: formData
+            this.showMessage('📸 Extrayendo regiones con Canvas API...', 'info');
+
+            // Usar canvas para procesar la imagen directamente en el navegador
+            const extractedImages = await this.extractRegionsWithCanvas();
+            
+            // Crear archivo ZIP con JSZip
+            const zip = new JSZip();
+            
+            // Añadir cada imagen extraída al ZIP
+            extractedImages.forEach((imageData, index) => {
+                const rect = this.rectangles[index];
+                const fileName = `${rect.customName || `region_${index + 1}`}.png`;
+                
+                // Convertir data URL a blob y añadir al ZIP
+                const base64Data = imageData.split(',')[1];
+                zip.file(fileName, base64Data, {base64: true});
             });
 
-            if (response.ok) {
-                const blob = await response.blob();
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `extracted_regions_${new Date().getTime()}.zip`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                alert('¡Procesamiento completado! Se ha descargado el archivo ZIP con las regiones extraídas.');
-            } else {
-                throw new Error('Error en el servidor');
-            }
+            // Crear metadatos JSON
+            const metadata = {
+                timestamp: new Date().toISOString(),
+                projectType: 'ancient_alphabet_extraction',
+                alphabetType: document.getElementById('alphabetType').value,
+                totalRegions: this.rectangles.length,
+                imageInfo: {
+                    originalWidth: this.backgroundImage.width / this.backgroundImage.scaleX,
+                    originalHeight: this.backgroundImage.height / this.backgroundImage.scaleY,
+                    canvasWidth: this.canvas.width,
+                    canvasHeight: this.canvas.height
+                },
+                regions: this.rectangles.map((rect, index) => ({
+                    id: rect.id || `region_${index + 1}`,
+                    name: rect.customName || `Región ${index + 1}`,
+                    unicode: rect.unicode || '',
+                    coordinates: {
+                        x: Math.round(rect.left),
+                        y: Math.round(rect.top),
+                        width: Math.round(rect.width * rect.scaleX),
+                        height: Math.round(rect.height * rect.scaleY)
+                    }
+                }))
+            };
+
+            zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+
+            // Generar y descargar el ZIP
+            const zipBlob = await zip.generateAsync({type: 'blob'});
+            const url = URL.createObjectURL(zipBlob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `extracted_alphabet_${new Date().getTime()}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            this.showMessage(`✅ ¡Éxito! Descargado ZIP con ${extractedImages.length} letras extraídas`, 'success');
+            
         } catch (error) {
             console.error('Error:', error);
-            alert('Error al procesar la imagen. Asegúrate de que el servidor backend esté ejecutándose.');
+            this.showMessage('❌ Error al procesar la imagen', 'error');
+            alert('Error al procesar la imagen: ' + error.message);
         } finally {
             // Restaurar botón
             const processBtn = document.getElementById('processImageBtn');
             processBtn.textContent = originalText;
             processBtn.disabled = false;
+        }
+    }
+
+    // Nueva función: Extraer regiones usando Canvas API
+    async extractRegionsWithCanvas() {
+        const imageFile = document.getElementById('imageInput').files[0];
+        
+        return new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => {
+                const extractedImages = [];
+                
+                // Calcular el factor de escala entre la imagen real y la mostrada en canvas
+                const scaleX = img.width / (this.backgroundImage.width * this.backgroundImage.scaleX);
+                const scaleY = img.height / (this.backgroundImage.height * this.backgroundImage.scaleY);
+                
+                console.log('🔍 Factor de escala:', { scaleX, scaleY });
+                console.log('📐 Imagen original:', { width: img.width, height: img.height });
+                console.log('📐 Imagen en canvas:', { 
+                    width: this.backgroundImage.width * this.backgroundImage.scaleX, 
+                    height: this.backgroundImage.height * this.backgroundImage.scaleY 
+                });
+
+                this.rectangles.forEach((rect, index) => {
+                    // Crear canvas temporal para extraer cada región
+                    const tempCanvas = document.createElement('canvas');
+                    const tempCtx = tempCanvas.getContext('2d');
+                    
+                    // Calcular coordenadas en la imagen original
+                    const sourceX = Math.round(rect.left * scaleX);
+                    const sourceY = Math.round(rect.top * scaleY);
+                    const sourceWidth = Math.round((rect.width * rect.scaleX) * scaleX);
+                    const sourceHeight = Math.round((rect.height * rect.scaleY) * scaleY);
+                    
+                    // Establecer tamaño del canvas temporal
+                    tempCanvas.width = sourceWidth;
+                    tempCanvas.height = sourceHeight;
+                    
+                    // Extraer la región de la imagen
+                    tempCtx.drawImage(
+                        img,
+                        sourceX, sourceY, sourceWidth, sourceHeight,  // Fuente
+                        0, 0, sourceWidth, sourceHeight                // Destino
+                    );
+                    
+                    // Convertir a data URL
+                    const dataURL = tempCanvas.toDataURL('image/png');
+                    extractedImages.push(dataURL);
+                    
+                    console.log(`✂️ Región ${index + 1} extraída:`, {
+                        name: rect.customName,
+                        source: { x: sourceX, y: sourceY, w: sourceWidth, h: sourceHeight },
+                        canvas: { x: rect.left, y: rect.top, w: rect.width * rect.scaleX, h: rect.height * rect.scaleY }
+                    });
+                });
+                
+                resolve(extractedImages);
+            };
+            
+            // Cargar la imagen original
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(imageFile);
+        });
+    }
+
+    // Nueva función: Mostrar mensajes al usuario
+    showMessage(message, type = 'info') {
+        // Crear o actualizar elemento de mensaje
+        let messageEl = document.getElementById('status-message');
+        if (!messageEl) {
+            messageEl = document.createElement('div');
+            messageEl.id = 'status-message';
+            messageEl.className = 'status-message';
+            document.querySelector('.controls-sidebar').prepend(messageEl);
+        }
+        
+        // Configurar estilo según tipo
+        messageEl.className = `status-message ${type}`;
+        messageEl.textContent = message;
+        messageEl.style.display = 'block';
+        
+        // Auto-ocultar después de 5 segundos para mensajes informativos
+        if (type === 'info' || type === 'success') {
+            setTimeout(() => {
+                if (messageEl) {
+                    messageEl.style.display = 'none';
+                }
+            }, 5000);
         }
     }
 
