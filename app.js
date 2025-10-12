@@ -1212,6 +1212,66 @@ class LetterExtractor {
         this.updateTemplateInfo();
     }
 
+    showMessage(message, type = 'info') {
+        // Crear o encontrar el contenedor de mensajes
+        let messageContainer = document.getElementById('messageContainer');
+        if (!messageContainer) {
+            messageContainer = document.createElement('div');
+            messageContainer.id = 'messageContainer';
+            messageContainer.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 1000;
+                max-width: 300px;
+            `;
+            document.body.appendChild(messageContainer);
+        }
+
+        // Crear el mensaje
+        const messageElement = document.createElement('div');
+        messageElement.style.cssText = `
+            background: ${type === 'success' ? '#4CAF50' : type === 'error' ? '#f44336' : '#2196F3'};
+            color: white;
+            padding: 10px 15px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 14px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        // Agregar estilos de animación si no existen
+        if (!document.getElementById('messageStyles')) {
+            const style = document.createElement('style');
+            style.id = 'messageStyles';
+            style.textContent = `
+                @keyframes slideIn {
+                    from { transform: translateX(100%); opacity: 0; }
+                    to { transform: translateX(0); opacity: 1; }
+                }
+                @keyframes slideOut {
+                    from { transform: translateX(0); opacity: 1; }
+                    to { transform: translateX(100%); opacity: 0; }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        messageElement.textContent = message;
+        messageContainer.appendChild(messageElement);
+
+        // Auto-remover después de 3 segundos
+        setTimeout(() => {
+            messageElement.style.animation = 'slideOut 0.3s ease-in';
+            setTimeout(() => {
+                if (messageElement.parentNode) {
+                    messageElement.parentNode.removeChild(messageElement);
+                }
+            }, 300);
+        }, 3000);
+    }
+
     enableControls() {
         document.getElementById('addRectBtn').disabled = false;
         document.getElementById('generateGridBtn').disabled = false;
