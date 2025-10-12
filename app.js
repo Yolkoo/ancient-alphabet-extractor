@@ -263,6 +263,11 @@ class LetterExtractor {
         
         this.canvas.on('mouse:up', (e) => {
             console.log('🖱️ Mouse up');
+            
+            // Actualizar template info solo cuando termine la interacción
+            if (this.templateRectangle) {
+                this.updateTemplateInfo();
+            }
         });
     }
 
@@ -951,68 +956,57 @@ class LetterExtractor {
         const width = Math.round(rect.width * rect.scaleX);
         const height = Math.round(rect.height * rect.scaleY);
         
-        // Mostrar información del template actualizada
+        // Mostrar información del template actualizada (sin DOM update durante movimiento)
         this.showMessage(`Template actualizado: ${width} × ${height} px`, 'info');
         
-        // Usar un debounce para actualizar la información del template
-        // Solo actualizar después de que termine la interacción
-        clearTimeout(this.templateUpdateTimeout);
-        this.templateUpdateTimeout = setTimeout(() => {
-            this.updateTemplateInfo();
-        }, 100);
+        // NO actualizar DOM durante el movimiento - solo al final
+        // La información se actualiza cuando se termina la interacción
     }
 
     updateTemplateInfo() {
-        let templateInfo = document.getElementById('templateInfo');
-        
-        if (!this.templateRectangle) {
-            // Si no hay template, remover la información si existe
-            if (templateInfo) {
-                templateInfo.remove();
-            }
-            return;
-        }
-        
-        const width = Math.round(this.templateRectangle.width * this.templateRectangle.scaleX);
-        const height = Math.round(this.templateRectangle.height * this.templateRectangle.scaleY);
-        
-        // Buscar o crear el elemento de información del template
-        if (!templateInfo) {
-            templateInfo = document.createElement('div');
-            templateInfo.id = 'templateInfo';
-            templateInfo.className = 'template-info';
+        // Función más segura que evita errores DOM
+        try {
+            let templateInfo = document.getElementById('templateInfo');
             
-            const sidebar = document.querySelector('.controls-sidebar');
-            if (sidebar) {
-                // Buscar un lugar apropiado para insertar
-                const generateBtn = document.getElementById('generateGridBtn');
+            if (!this.templateRectangle) {
+                // Si no hay template, remover la información si existe
+                if (templateInfo && templateInfo.parentNode) {
+                    templateInfo.remove();
+                }
+                return;
+            }
+            
+            const width = Math.round(this.templateRectangle.width * this.templateRectangle.scaleX);
+            const height = Math.round(this.templateRectangle.height * this.templateRectangle.scaleY);
+            
+            // Si no existe, crear el elemento de información del template
+            if (!templateInfo) {
+                templateInfo = document.createElement('div');
+                templateInfo.id = 'templateInfo';
+                templateInfo.className = 'template-info';
                 
-                // Verificar que generateBtn sea hijo directo de sidebar antes de insertBefore
-                if (generateBtn && sidebar.contains(generateBtn) && generateBtn.parentNode === sidebar) {
-                    try {
-                        sidebar.insertBefore(templateInfo, generateBtn);
-                    } catch (error) {
-                        console.warn('Error insertBefore, usando appendChild:', error);
-                        sidebar.appendChild(templateInfo);
-                    }
-                } else {
-                    // Si no hay botón de grid o no es hijo directo, agregar al final de la sidebar
+                const sidebar = document.querySelector('.controls-sidebar');
+                if (sidebar) {
+                    // Simplemente agregar al final del sidebar para evitar errores
                     sidebar.appendChild(templateInfo);
                 }
             }
-        }
-        
-        // Actualizar el contenido solo si el elemento existe y está en el DOM
-        if (templateInfo && templateInfo.parentNode) {
-            templateInfo.innerHTML = `
-                <div class="template-status">
-                    <span class="template-icon">📏</span>
-                    <div class="template-details">
-                        <div class="template-title">Template Activo</div>
-                        <div class="template-size">${width} × ${height} px</div>
+            
+            // Actualizar el contenido solo si el elemento existe y está en el DOM
+            if (templateInfo && templateInfo.parentNode) {
+                templateInfo.innerHTML = `
+                    <div class="template-status">
+                        <span class="template-icon">📏</span>
+                        <div class="template-details">
+                            <div class="template-title">Template Activo</div>
+                            <div class="template-size">${width} × ${height} px</div>
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            }
+        } catch (error) {
+            console.warn('Error en updateTemplateInfo (ignorado):', error);
+            // No hacer nada, seguir funcionando sin mostrar template info
         }
     }
 
