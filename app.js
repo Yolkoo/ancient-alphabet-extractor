@@ -78,27 +78,6 @@ class LetterExtractor {
         this.init();
     }
 
-    // Función helper para generar nombres de archivo limpios
-    getCleanImageName(file = null) {
-        let imageName = '';
-        
-        if (file) {
-            imageName = file.name;
-        } else {
-            const imageInput = document.getElementById('imageInput');
-            if (imageInput && imageInput.files[0]) {
-                imageName = imageInput.files[0].name;
-            }
-        }
-        
-        // Remover extensión y caracteres especiales
-        return imageName
-            .replace(/\.[^/.]+$/, '') // Remover extensión
-            .replace(/[^a-zA-Z0-9_-]/g, '_') // Reemplazar caracteres especiales con _
-            .replace(/_+/g, '_') // Reemplazar múltiples _ con uno solo
-            .replace(/^_|_$/g, ''); // Remover _ al inicio y final
-    }
-
     init() {
         // Inicializar canvas de Fabric.js
         this.canvas = new fabric.Canvas('canvas', {
@@ -220,15 +199,6 @@ class LetterExtractor {
         document.getElementById('suffixInput').addEventListener('input', () => {
             this.updateAutoPrefix();
         });
-
-        // Debug buttons (temporal)
-        document.getElementById('debugRectsBtn').addEventListener('click', () => {
-            this.debugAllRectangles();
-        });
-
-        document.getElementById('fixTemplateBtn').addEventListener('click', () => {
-            this.fixTemplateInteractivity();
-        });
     }
 
     setupCanvasEvents() {
@@ -284,11 +254,6 @@ class LetterExtractor {
         
         this.canvas.on('mouse:up', (e) => {
             console.log('🖱️ Mouse up');
-            
-            // Actualizar template info solo cuando termine la interacción
-            if (this.templateRectangle) {
-                this.updateTemplateInfo();
-            }
         });
     }
 
@@ -559,47 +524,16 @@ class LetterExtractor {
             width = this.templateRectangle.width * this.templateRectangle.scaleX;
             height = this.templateRectangle.height * this.templateRectangle.scaleY;
             
-            // Calcular posición en grid inteligente
-            const horizontalSpacing = 0; // Sin espacio entre rectángulos en la misma fila
-            const verticalSpacing = 10; // Mantener espacio entre filas
-            const startX = this.templateRectangle.left;
-            const startY = this.templateRectangle.top;
-            
-            // Obtener dimensiones de la imagen para calcular límites
-            const imageWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
-            const imageHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
-            
-            console.log(`🔍 DEBUG Grid calculation for rect ${this.rectCounter}:`);
-            console.log(`   Template position: (${startX}, ${startY})`);
-            console.log(`   Template size: ${width} x ${height}`);
-            console.log(`   Image size: ${imageWidth} x ${imageHeight}`);
-            
-            // Calcular cuántos rectángulos caben por fila (sin espacio horizontal)
-            const rectWithSpacing = width + horizontalSpacing; // Ahora es solo width
-            const availableWidth = imageWidth - startX - width; // Espacio disponible desde el template
-            const maxRectsPerRow = Math.max(1, Math.floor(availableWidth / rectWithSpacing) + 1); // +1 incluye el template, mínimo 1
-            
-            console.log(`   Available width: ${availableWidth}`);
-            console.log(`   Rect with spacing: ${rectWithSpacing}`);
-            console.log(`   Max rects per row: ${maxRectsPerRow}`);
-            
-            // Calcular posición en grid (índice empieza en 0 para el template, 1 para el segundo rectángulo)
-            const gridIndex = this.rectCounter - 1; // Índice del rectángulo actual (template es 0)
-            const row = Math.floor(gridIndex / maxRectsPerRow);
-            const col = gridIndex % maxRectsPerRow;
-            
-            // Posicionar en el grid
-            left = startX + col * rectWithSpacing; // Sin espacio horizontal
-            top = startY + row * (height + verticalSpacing); // Con espacio vertical
-            
-            console.log(`📐 Grid positioning: rect ${this.rectCounter}, gridIndex=${gridIndex}, grid(${row},${col}), pos(${Math.round(left)},${Math.round(top)})`);
-            
-            // Verificar si está fuera de los límites
-            if (left + width > imageWidth) {
-                console.warn(`⚠️  Rectangle would be outside image bounds! left+width=${left + width} > imageWidth=${imageWidth}`);
-            }
-            if (top + height > imageHeight) {
-                console.warn(`⚠️  Rectangle would be outside image bounds! top+height=${top + height} > imageHeight=${imageHeight}`);
+            // Posicionar el siguiente rectángulo automáticamente
+            const spacing = 10;
+            if (this.imageOrientation === 'horizontal') {
+                // Colocar horizontalmente
+                left = this.templateRectangle.left + (width + spacing) * (this.rectCounter - 1);
+                top = this.templateRectangle.top;
+            } else {
+                // Colocar verticalmente
+                left = this.templateRectangle.left;
+                top = this.templateRectangle.top + (height + spacing) * (this.rectCounter - 1);
             }
         }
         
@@ -608,24 +542,16 @@ class LetterExtractor {
             top: top,
             width: width,
             height: height,
-            fill: 'rgba(255, 0, 0, 0.3)', // Rojo para debug - más visible
-            stroke: '#ff0000',
+            fill: this.rectCounter === 1 ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 0, 0.3)', // Cyan para el primero, verde para los demás
+            stroke: this.rectCounter === 1 ? '#00ffff' : '#00ff00', // Cyan para el primero, verde para los demás
             strokeWidth: 3,
             cornerSize: 12,
-            // PROPIEDADES CRÍTICAS DE INTERACCIÓN - FORZAR VALORES
+            // Propiedades básicas de interacción
             selectable: true,
             evented: true,
             hasControls: true,
             hasBorders: true,
-            hasRotatingPoint: true,
-            lockRotation: false,
-            moveable: true,
-            // Propiedades adicionales para asegurar interacción
-            hoverCursor: 'move',
-            moveCursor: 'move',
-            transparentCorners: false,
-            cornerColor: '#fff',
-            cornerStyle: 'rect'
+            hasRotatingPoint: false
         });
 
         // Añadir datos personalizados
@@ -636,65 +562,45 @@ class LetterExtractor {
         });
 
         this.canvas.add(rect);
+        this.canvas.setActiveObject(rect);
+        this.canvas.renderAll();
+
         this.rectangles.push(rect);
         
-        // Si es el primer rectángulo, configurarlo como template DESPUÉS de agregarlo al canvas
+        // Si es el primer rectángulo, establecerlo como template SIN llamar a setAsTemplate
         if (!this.templateRectangle) {
-            console.log('🎯 Configurando primer rectángulo como template...');
-            
-            // Establecer template INMEDIATAMENTE, no en setTimeout
             this.templateRectangle = rect;
             this.detectImageOrientation();
             
-            // SOLO cambiar apariencia visual, NO tocar propiedades de interacción
-            rect.set({
-                stroke: '#28a745',
-                strokeWidth: 3,
-                fill: 'rgba(40, 167, 69, 0.2)'
-            });
-            
-            // Marcar como template con una propiedad personalizada
-            rect.isTemplate = true;
-            
-            // FORZAR re-renderizado
-            this.canvas.renderAll();
-            
-            // Debug: verificar que las propiedades se mantuvieron
-            console.log('✅ Template configurado - Propiedades finales:', {
-                selectable: rect.selectable,
-                evented: rect.evented,
-                hasControls: rect.hasControls,
-                hasBorders: rect.hasBorders,
-                moveable: rect.moveable,
-                isTemplate: rect.isTemplate
-            });
+            // Solo cambiar el color, NO las propiedades de interacción
+            rect.stroke = '#00ffff'; // Cyan para indicar que es template y primera letra
+            rect.strokeWidth = 3;
             
             this.updateTemplateInfo();
-            this.showMessage(`Template establecido: ${rect.customName}`, 'success');
+            console.log('✅ Template establecido SIN setAsTemplate - Manteniendo interactividad');
         }
-        
-        // Forzar selección del nuevo rectángulo
-        setTimeout(() => {
-            this.canvas.setActiveObject(rect);
-            this.canvas.renderAll();
-        }, 100);
         
         this.updateRectanglesList();
         this.handleSelection(rect);
         
-        // Debug log detallado
-        console.log(`✅ Rectángulo creado: ${letterName} en (${Math.round(left)}, ${Math.round(top)}) - ${Math.round(width)}x${Math.round(height)}`, {
-            position: { left, top },
-            size: { width, height },
-            properties: {
-                selectable: rect.selectable,
-                evented: rect.evented,
-                hasControls: rect.hasControls,
-                moveable: rect.moveable
-            }
+        // Debug log
+        console.log(`✅ Rectángulo creado: ${letterName} en (${left}, ${top}) - ${width}x${height}`);
+        console.log('🔍 Propiedades del rectángulo:', {
+            selectable: rect.selectable,
+            evented: rect.evented,
+            hasControls: rect.hasControls,
+            moveable: rect.moveable,
+            lockRotation: rect.lockRotation
         });
         
-        this.showMessage(`Rectángulo "${letterName}" añadido`, 'success');
+        this.showMessage(`Rectángulo "${letterName}" añadido - Puedes moverlo y redimensionarlo`, 'success');
+        
+        // Test: forzar selección después de un momento
+        setTimeout(() => {
+            this.canvas.setActiveObject(rect);
+            this.canvas.renderAll();
+            console.log('🎯 Rectángulo seleccionado automáticamente para test');
+        }, 100);
     }
 
     deleteSelected() {
@@ -728,19 +634,19 @@ class LetterExtractor {
         // Remover el rectángulo actual
         this.canvas.remove(rect);
         
+        // Determinar si es el primer rectángulo para asignar color correcto
+        const isFirstRect = this.rectangles.indexOf(rect) === 0 || rect === this.templateRectangle;
+        
         // Crear un rectángulo completamente nuevo
         const newRect = new fabric.Rect({
             left: currentLeft,
             top: currentTop,
             width: currentWidth,
             height: currentHeight,
-            fill: 'rgba(0, 123, 255, 0.3)',
-            stroke: '#007bff',
-            strokeWidth: 2,
-            cornerColor: '#007bff',
+            fill: isFirstRect ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 0, 0.3)', // Cyan para el primero, verde para los demás
+            stroke: isFirstRect ? '#00ffff' : '#00ff00', // Cyan para el primero, verde para los demás
+            strokeWidth: 3,
             cornerSize: 12,
-            transparentCorners: false,
-            cornerStyle: 'rect',
             selectable: true,
             evented: true,
             hasControls: true,
@@ -769,7 +675,7 @@ class LetterExtractor {
             this.templateRectangle = newRect;
             // Configurar como template SIN llamar setAsTemplate (preservar interactividad)
             newRect.isTemplate = true;
-            newRect.stroke = '#28a745';
+            newRect.stroke = '#00ffff'; // Cyan para template (primera letra)
             newRect.strokeWidth = 3;
             // Mantener todas las propiedades de interacción intactas
         }
@@ -868,7 +774,7 @@ class LetterExtractor {
         // Agregar indicador visual al template MANTENIENDO las propiedades de interacción
         if (this.templateRectangle) {
             this.templateRectangle.set({
-                stroke: '#28a745', // Verde para indicar que es template
+                stroke: '#00ffff', // Cyan para indicar que es template (primera letra)
                 strokeWidth: 3,
                 // IMPORTANTE: Mantener propiedades de interacción
                 selectable: true,
@@ -1006,58 +912,52 @@ class LetterExtractor {
         const width = Math.round(rect.width * rect.scaleX);
         const height = Math.round(rect.height * rect.scaleY);
         
-        // Mostrar información del template actualizada (sin DOM update durante movimiento)
+        // Mostrar información del template actualizada
         this.showMessage(`Template actualizado: ${width} × ${height} px`, 'info');
         
-        // NO actualizar DOM durante el movimiento - solo al final
-        // La información se actualiza cuando se termina la interacción
+        // Actualizar la información del template en la interfaz
+        this.updateTemplateInfo();
     }
 
     updateTemplateInfo() {
-        // Función más segura que evita errores DOM
-        try {
-            let templateInfo = document.getElementById('templateInfo');
-            
-            if (!this.templateRectangle) {
-                // Si no hay template, remover la información si existe
-                if (templateInfo && templateInfo.parentNode) {
-                    templateInfo.remove();
-                }
-                return;
+        let templateInfo = document.getElementById('templateInfo');
+        
+        if (!this.templateRectangle) {
+            // Si no hay template, remover la información si existe
+            if (templateInfo) {
+                templateInfo.remove();
             }
-            
-            const width = Math.round(this.templateRectangle.width * this.templateRectangle.scaleX);
-            const height = Math.round(this.templateRectangle.height * this.templateRectangle.scaleY);
-            
-            // Si no existe, crear el elemento de información del template
-            if (!templateInfo) {
-                templateInfo = document.createElement('div');
-                templateInfo.id = 'templateInfo';
-                templateInfo.className = 'template-info';
-                
-                const sidebar = document.querySelector('.controls-sidebar');
-                if (sidebar) {
-                    // Simplemente agregar al final del sidebar para evitar errores
-                    sidebar.appendChild(templateInfo);
-                }
-            }
-            
-            // Actualizar el contenido solo si el elemento existe y está en el DOM
-            if (templateInfo && templateInfo.parentNode) {
-                templateInfo.innerHTML = `
-                    <div class="template-status">
-                        <span class="template-icon">📏</span>
-                        <div class="template-details">
-                            <div class="template-title">Template Activo</div>
-                            <div class="template-size">${width} × ${height} px</div>
-                        </div>
-                    </div>
-                `;
-            }
-        } catch (error) {
-            console.warn('Error en updateTemplateInfo (ignorado):', error);
-            // No hacer nada, seguir funcionando sin mostrar template info
+            return;
         }
+        
+        const width = Math.round(this.templateRectangle.width * this.templateRectangle.scaleX);
+        const height = Math.round(this.templateRectangle.height * this.templateRectangle.scaleY);
+        
+        // Buscar o crear el elemento de información del template
+        if (!templateInfo) {
+            templateInfo = document.createElement('div');
+            templateInfo.id = 'templateInfo';
+            templateInfo.className = 'template-info';
+            
+            const sidebar = document.querySelector('.controls-sidebar');
+            const generateBtn = document.getElementById('generateGridBtn');
+            if (generateBtn && sidebar) {
+                sidebar.insertBefore(templateInfo, generateBtn);
+            } else if (sidebar) {
+                // Si no hay botón de grid, agregar al final de la sidebar
+                sidebar.appendChild(templateInfo);
+            }
+        }
+        
+        templateInfo.innerHTML = `
+            <div class="template-status">
+                <span class="template-icon">📏</span>
+                <div class="template-details">
+                    <div class="template-title">Template Activo</div>
+                    <div class="template-size">${width} × ${height} px</div>
+                </div>
+            </div>
+        `;
     }
 
     updateRectanglesList() {
@@ -1127,16 +1027,9 @@ class LetterExtractor {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
-        // Generar nombre de archivo más descriptivo con el nombre de la imagen
-        const cleanImageName = this.getCleanImageName();
-        const timestamp = new Date().getTime();
-        const fileName = cleanImageName 
-            ? `${cleanImageName}_coordinates_${timestamp}.json`
-            : `alphabet_letters_${timestamp}.json`;
-        
         const a = document.createElement('a');
         a.href = url;
-        a.download = fileName;
+        a.download = `alphabet_letters_${new Date().getTime()}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1156,323 +1049,68 @@ class LetterExtractor {
             return;
         }
 
-        // Declarar originalText fuera del try-catch para que esté disponible en finally
-        const processBtn = document.getElementById('processImageBtn');
-        const originalText = processBtn.textContent;
+        const formData = new FormData();
+        formData.append('image', imageInput.files[0]);
+        
+        // Añadir datos de las regiones
+        const regionsData = {
+            imageInfo: {
+                width: this.canvas.width,
+                height: this.canvas.height,
+                originalWidth: this.backgroundImage.width / this.backgroundImage.scaleX,
+                originalHeight: this.backgroundImage.height / this.backgroundImage.scaleY
+            },
+            regions: this.rectangles.map((rect, index) => ({
+                id: rect.id || `rect_${index + 1}`,
+                name: rect.customName || `Región ${index + 1}`,
+                coordinates: {
+                    x: Math.round(rect.left),
+                    y: Math.round(rect.top),
+                    width: Math.round(rect.width * rect.scaleX),
+                    height: Math.round(rect.height * rect.scaleY)
+                }
+            }))
+        };
+        
+        formData.append('regions', JSON.stringify(regionsData));
 
         try {
             // Deshabilitar botón mientras procesa
+            const processBtn = document.getElementById('processImageBtn');
+            const originalText = processBtn.textContent;
             processBtn.textContent = '⏳ Procesando...';
             processBtn.disabled = true;
 
-            this.showMessage('📸 Extrayendo regiones con Canvas API...', 'info');
-
-            // Usar canvas para procesar la imagen directamente en el navegador
-            const extractedImages = await this.extractRegionsWithCanvas();
-            
-            // Crear archivo ZIP con JSZip
-            const zip = new JSZip();
-            
-            // Añadir cada imagen extraída al ZIP
-            extractedImages.forEach((imageData, index) => {
-                const rect = this.rectangles[index];
-                const fileName = `${rect.customName || `region_${index + 1}`}.png`;
-                
-                // Convertir data URL a blob y añadir al ZIP
-                const base64Data = imageData.split(',')[1];
-                zip.file(fileName, base64Data, {base64: true});
+            const response = await fetch('http://localhost:5004/process', {
+                method: 'POST',
+                body: formData
             });
 
-            // Crear metadatos JSON
-            const metadata = {
-                timestamp: new Date().toISOString(),
-                projectType: 'ancient_alphabet_extraction',
-                alphabetType: document.getElementById('alphabetType').value,
-                totalRegions: this.rectangles.length,
-                imageInfo: {
-                    originalWidth: this.backgroundImage.width / this.backgroundImage.scaleX,
-                    originalHeight: this.backgroundImage.height / this.backgroundImage.scaleY,
-                    canvasWidth: this.canvas.width,
-                    canvasHeight: this.canvas.height
-                },
-                regions: this.rectangles.map((rect, index) => ({
-                    id: rect.id || `region_${index + 1}`,
-                    name: rect.customName || `Región ${index + 1}`,
-                    unicode: rect.unicode || '',
-                    coordinates: {
-                        x: Math.round(rect.left),
-                        y: Math.round(rect.top),
-                        width: Math.round(rect.width * rect.scaleX),
-                        height: Math.round(rect.height * rect.scaleY)
-                    }
-                }))
-            };
-
-            // Generar nombres de archivo más descriptivos con el nombre de la imagen
-            const cleanImageName = this.getCleanImageName();
-            const timestamp = new Date().getTime();
-            const metadataFileName = cleanImageName 
-                ? `${cleanImageName}_metadata.json`
-                : 'metadata.json';
-
-            zip.file(metadataFileName, JSON.stringify(metadata, null, 2));
-
-            // Generar y descargar el ZIP
-            const zipBlob = await zip.generateAsync({type: 'blob'});
-            const url = URL.createObjectURL(zipBlob);
-            
-            const zipFileName = cleanImageName 
-                ? `${cleanImageName}_extracted_alphabet_${timestamp}.zip`
-                : `extracted_alphabet_${timestamp}.zip`;
-            
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = zipFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            
-            this.showMessage(`✅ ¡Éxito! Descargado ZIP con ${extractedImages.length} letras extraídas`, 'success');
-            
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `extracted_regions_${new Date().getTime()}.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                alert('¡Procesamiento completado! Se ha descargado el archivo ZIP con las regiones extraídas.');
+            } else {
+                throw new Error('Error en el servidor');
+            }
         } catch (error) {
             console.error('Error:', error);
-            this.showMessage('❌ Error al procesar la imagen', 'error');
-            alert('Error al procesar la imagen: ' + error.message);
+            alert('Error al procesar la imagen. Asegúrate de que el servidor backend esté ejecutándose.');
         } finally {
             // Restaurar botón
+            const processBtn = document.getElementById('processImageBtn');
             processBtn.textContent = originalText;
             processBtn.disabled = false;
         }
-    }
-
-    // Nueva función: Extraer regiones usando Canvas API
-    async extractRegionsWithCanvas() {
-        const imageFile = document.getElementById('imageInput').files[0];
-        
-        return new Promise((resolve) => {
-            const img = new Image();
-            img.onload = () => {
-                const extractedImages = [];
-                
-                // Calcular el factor de escala entre la imagen real y la mostrada en canvas
-                const scaleX = img.width / (this.backgroundImage.width * this.backgroundImage.scaleX);
-                const scaleY = img.height / (this.backgroundImage.height * this.backgroundImage.scaleY);
-                
-                console.log('🔍 Factor de escala:', { scaleX, scaleY });
-                console.log('📐 Imagen original:', { width: img.width, height: img.height });
-                console.log('📐 Imagen en canvas:', { 
-                    width: this.backgroundImage.width * this.backgroundImage.scaleX, 
-                    height: this.backgroundImage.height * this.backgroundImage.scaleY 
-                });
-
-                this.rectangles.forEach((rect, index) => {
-                    // Crear canvas temporal para extraer cada región
-                    const tempCanvas = document.createElement('canvas');
-                    const tempCtx = tempCanvas.getContext('2d');
-                    
-                    // Calcular coordenadas en la imagen original
-                    const sourceX = Math.round(rect.left * scaleX);
-                    const sourceY = Math.round(rect.top * scaleY);
-                    const sourceWidth = Math.round((rect.width * rect.scaleX) * scaleX);
-                    const sourceHeight = Math.round((rect.height * rect.scaleY) * scaleY);
-                    
-                    // Establecer tamaño del canvas temporal
-                    tempCanvas.width = sourceWidth;
-                    tempCanvas.height = sourceHeight;
-                    
-                    // Extraer la región de la imagen
-                    tempCtx.drawImage(
-                        img,
-                        sourceX, sourceY, sourceWidth, sourceHeight,  // Fuente
-                        0, 0, sourceWidth, sourceHeight                // Destino
-                    );
-                    
-                    // Convertir a data URL
-                    const dataURL = tempCanvas.toDataURL('image/png');
-                    extractedImages.push(dataURL);
-                    
-                    console.log(`✂️ Región ${index + 1} extraída:`, {
-                        name: rect.customName,
-                        source: { x: sourceX, y: sourceY, w: sourceWidth, h: sourceHeight },
-                        canvas: { x: rect.left, y: rect.top, w: rect.width * rect.scaleX, h: rect.height * rect.scaleY }
-                    });
-                });
-                
-                resolve(extractedImages);
-            };
-            
-            // Cargar la imagen original
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(imageFile);
-        });
-    }
-
-    // Nueva función: Mostrar mensajes al usuario
-    showMessage(message, type = 'info') {
-        // Crear o actualizar elemento de mensaje
-        let messageEl = document.getElementById('status-message');
-        if (!messageEl) {
-            messageEl = document.createElement('div');
-            messageEl.id = 'status-message';
-            messageEl.className = 'status-message';
-            document.querySelector('.controls-sidebar').prepend(messageEl);
-        }
-        
-        // Configurar estilo según tipo
-        messageEl.className = `status-message ${type}`;
-        messageEl.textContent = message;
-        messageEl.style.display = 'block';
-        
-        // Auto-ocultar después de 5 segundos para mensajes informativos
-        if (type === 'info' || type === 'success') {
-            setTimeout(() => {
-                if (messageEl) {
-                    messageEl.style.display = 'none';
-                }
-            }, 5000);
-        }
-    }
-
-    // Función de debug: Analizar todos los rectángulos
-    debugAllRectangles() {
-        console.log('🔍 DEBUG: Analizando todos los rectángulos...');
-        console.log('📊 Canvas info:', {
-            selection: this.canvas.selection,
-            interactive: this.canvas.interactive,
-            totalObjects: this.canvas.getObjects().length,
-            rectangles: this.rectangles.length
-        });
-
-        this.rectangles.forEach((rect, index) => {
-            const isTemplate = rect === this.templateRectangle;
-            console.log(`📋 Rectángulo ${index + 1}${isTemplate ? ' (TEMPLATE)' : ''}:`, {
-                name: rect.customName,
-                selectable: rect.selectable,
-                evented: rect.evented,
-                hasControls: rect.hasControls,
-                hasBorders: rect.hasBorders,
-                moveable: rect.moveable,
-                lockRotation: rect.lockRotation,
-                isTemplate: rect.isTemplate,
-                position: `(${rect.left}, ${rect.top})`,
-                size: `${rect.width * rect.scaleX}x${rect.height * rect.scaleY}`,
-                stroke: rect.stroke,
-                fill: rect.fill
-            });
-        });
-
-        // Mostrar información en pantalla
-        const problemRects = this.rectangles.filter(rect => 
-            !rect.selectable || !rect.evented || !rect.hasControls
-        );
-
-        if (problemRects.length > 0) {
-            console.log('❌ Rectángulos con problemas encontrados:', problemRects.length);
-            this.showMessage(`⚠️ ${problemRects.length} rectángulos tienen problemas de interactividad`, 'error');
-            document.getElementById('fixTemplateBtn').disabled = false;
-        } else {
-            console.log('✅ Todos los rectángulos están correctamente configurados');
-            this.showMessage('✅ Todos los rectángulos funcionan correctamente', 'success');
-            document.getElementById('fixTemplateBtn').disabled = true;
-        }
-
-        // Test específico del template
-        if (this.templateRectangle) {
-            console.log('🎯 Test específico del template:', {
-                canSelect: this.templateRectangle.selectable,
-                canEvent: this.templateRectangle.evented,
-                hasControls: this.templateRectangle.hasControls,
-                position: this.templateRectangle.getBoundingRect()
-            });
-
-            // Intentar seleccionar el template
-            try {
-                this.canvas.setActiveObject(this.templateRectangle);
-                this.canvas.renderAll();
-                console.log('✅ Template seleccionado exitosamente');
-            } catch (error) {
-                console.log('❌ Error al seleccionar template:', error);
-            }
-        }
-    }
-
-    // Función de debug: Arreglar template
-    fixTemplateInteractivity() {
-        if (!this.templateRectangle) {
-            this.showMessage('❌ No hay template para arreglar', 'error');
-            return;
-        }
-
-        console.log('🔧 Intentando arreglar interactividad del template...');
-        
-        const template = this.templateRectangle;
-        const originalData = {
-            left: template.left,
-            top: template.top,
-            width: template.width * template.scaleX,
-            height: template.height * template.scaleY,
-            customName: template.customName,
-            unicode: template.unicode,
-            id: template.id
-        };
-
-        // Remover el template problemático
-        this.canvas.remove(template);
-        const templateIndex = this.rectangles.indexOf(template);
-
-        // Crear un nuevo rectángulo completamente funcional
-        const newTemplate = new fabric.Rect({
-            left: originalData.left,
-            top: originalData.top,
-            width: originalData.width,
-            height: originalData.height,
-            fill: 'rgba(40, 167, 69, 0.2)',
-            stroke: '#28a745',
-            strokeWidth: 3,
-            cornerSize: 12,
-            // FORZAR todas las propiedades de interacción
-            selectable: true,
-            evented: true,
-            hasControls: true,
-            hasBorders: true,
-            hasRotatingPoint: true,
-            lockRotation: false,
-            moveable: true,
-            hoverCursor: 'move',
-            moveCursor: 'move'
-        });
-
-        // Restaurar datos
-        newTemplate.set({
-            id: originalData.id,
-            customName: originalData.customName,
-            unicode: originalData.unicode,
-            isTemplate: true
-        });
-
-        // Agregar al canvas
-        this.canvas.add(newTemplate);
-        
-        // Actualizar referencias
-        this.templateRectangle = newTemplate;
-        if (templateIndex !== -1) {
-            this.rectangles[templateIndex] = newTemplate;
-        }
-
-        // Seleccionar inmediatamente
-        this.canvas.setActiveObject(newTemplate);
-        this.canvas.renderAll();
-
-        console.log('✅ Template recreado con interactividad completa');
-        this.showMessage('🔧 Template reparado - ¡Ahora debería funcionar!', 'success');
-        
-        // Actualizar UI
-        this.updateRectanglesList();
-        this.updateTemplateInfo();
     }
 
     clearAll() {
