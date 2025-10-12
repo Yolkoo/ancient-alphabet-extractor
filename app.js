@@ -560,7 +560,8 @@ class LetterExtractor {
             height = this.templateRectangle.height * this.templateRectangle.scaleY;
             
             // Calcular posición en grid inteligente
-            const spacing = 10;
+            const horizontalSpacing = 0; // Sin espacio entre rectángulos en la misma fila
+            const verticalSpacing = 10; // Mantener espacio entre filas
             const startX = this.templateRectangle.left;
             const startY = this.templateRectangle.top;
             
@@ -573,8 +574,8 @@ class LetterExtractor {
             console.log(`   Template size: ${width} x ${height}`);
             console.log(`   Image size: ${imageWidth} x ${imageHeight}`);
             
-            // Calcular cuántos rectángulos caben por fila
-            const rectWithSpacing = width + spacing;
+            // Calcular cuántos rectángulos caben por fila (sin espacio horizontal)
+            const rectWithSpacing = width + horizontalSpacing; // Ahora es solo width
             const availableWidth = imageWidth - startX - width; // Espacio disponible desde el template
             const maxRectsPerRow = Math.max(1, Math.floor(availableWidth / rectWithSpacing) + 1); // +1 incluye el template, mínimo 1
             
@@ -588,8 +589,8 @@ class LetterExtractor {
             const col = gridIndex % maxRectsPerRow;
             
             // Posicionar en el grid
-            left = startX + col * rectWithSpacing;
-            top = startY + row * (height + spacing);
+            left = startX + col * rectWithSpacing; // Sin espacio horizontal
+            top = startY + row * (height + verticalSpacing); // Con espacio vertical
             
             console.log(`📐 Grid positioning: rect ${this.rectCounter}, gridIndex=${gridIndex}, grid(${row},${col}), pos(${Math.round(left)},${Math.round(top)})`);
             
