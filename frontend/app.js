@@ -634,19 +634,19 @@ class LetterExtractor {
         // Remover el rectángulo actual
         this.canvas.remove(rect);
         
+        // Determinar si es el primer rectángulo para asignar color correcto
+        const isFirstRect = this.rectangles.indexOf(rect) === 0 || rect === this.templateRectangle;
+        
         // Crear un rectángulo completamente nuevo
         const newRect = new fabric.Rect({
             left: currentLeft,
             top: currentTop,
             width: currentWidth,
             height: currentHeight,
-            fill: 'rgba(0, 123, 255, 0.3)',
-            stroke: '#007bff',
-            strokeWidth: 2,
-            cornerColor: '#007bff',
+            fill: isFirstRect ? 'rgba(0, 255, 255, 0.3)' : 'rgba(0, 255, 0, 0.3)', // Cyan para el primero, verde para los demás
+            stroke: isFirstRect ? '#00ffff' : '#00ff00', // Cyan para el primero, verde para los demás
+            strokeWidth: 3,
             cornerSize: 12,
-            transparentCorners: false,
-            cornerStyle: 'rect',
             selectable: true,
             evented: true,
             hasControls: true,
@@ -675,7 +675,7 @@ class LetterExtractor {
             this.templateRectangle = newRect;
             // Configurar como template SIN llamar setAsTemplate (preservar interactividad)
             newRect.isTemplate = true;
-            newRect.stroke = '#28a745';
+            newRect.stroke = '#00ffff'; // Cyan para template (primera letra)
             newRect.strokeWidth = 3;
             // Mantener todas las propiedades de interacción intactas
         }
@@ -774,7 +774,7 @@ class LetterExtractor {
         // Agregar indicador visual al template MANTENIENDO las propiedades de interacción
         if (this.templateRectangle) {
             this.templateRectangle.set({
-                stroke: '#28a745', // Verde para indicar que es template
+                stroke: '#00ffff', // Cyan para indicar que es template (primera letra)
                 strokeWidth: 3,
                 // IMPORTANTE: Mantener propiedades de interacción
                 selectable: true,

@@ -215,6 +215,18 @@ header p {
     color: white;
 }
 
+.btn-info {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.btn-info:hover:not(:disabled) {
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: white;
+}
+
 /* Controles de alfabeto */
 .alphabet-controls {
     border-top: 1px solid var(--border-color);
