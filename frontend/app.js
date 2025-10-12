@@ -606,12 +606,8 @@ class LetterExtractor {
             this.templateRectangle = rect;
             this.detectImageOrientation();
             
-            // Solo cambiar el color, NO las propiedades de interacción
-            rect.stroke = '#00ffff'; // Cyan para indicar que es template y primera letra
-            rect.strokeWidth = 3;
-            
             this.updateTemplateInfo();
-            console.log('✅ Template establecido SIN setAsTemplate - Manteniendo interactividad');
+            console.log('✅ Template establecido - Primera letra totalmente editable');
         }
         
         this.updateRectanglesList();
@@ -623,18 +619,10 @@ class LetterExtractor {
             selectable: rect.selectable,
             evented: rect.evented,
             hasControls: rect.hasControls,
-            moveable: rect.moveable,
-            lockRotation: rect.lockRotation
+            hasBorders: rect.hasBorders
         });
         
         this.showMessage(`Rectángulo "${letterName}" añadido - Puedes moverlo y redimensionarlo`, 'success');
-        
-        // Test: forzar selección después de un momento
-        setTimeout(() => {
-            this.canvas.setActiveObject(rect);
-            this.canvas.renderAll();
-            console.log('🎯 Rectángulo seleccionado automáticamente para test');
-        }, 100);
     }
 
     deleteSelected() {
