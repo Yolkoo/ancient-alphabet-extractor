@@ -538,17 +538,30 @@ class LetterExtractor {
             width = this.templateRectangle.width * this.templateRectangle.scaleX;
             height = this.templateRectangle.height * this.templateRectangle.scaleY;
             
-            // Posicionar el siguiente rectángulo automáticamente
+            // Calcular posición en grid inteligente
             const spacing = 10;
-            if (this.imageOrientation === 'horizontal') {
-                // Colocar horizontalmente
-                left = this.templateRectangle.left + (width + spacing) * (this.rectCounter - 1);
-                top = this.templateRectangle.top;
-            } else {
-                // Colocar verticalmente
-                left = this.templateRectangle.left;
-                top = this.templateRectangle.top + (height + spacing) * (this.rectCounter - 1);
-            }
+            const startX = this.templateRectangle.left;
+            const startY = this.templateRectangle.top;
+            
+            // Obtener dimensiones de la imagen para calcular límites
+            const imageWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
+            const imageHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
+            
+            // Calcular cuántos rectángulos caben por fila
+            const rectWithSpacing = width + spacing;
+            const availableWidth = imageWidth - startX - width; // Espacio disponible desde el template
+            const maxRectsPerRow = Math.floor(availableWidth / rectWithSpacing) + 1; // +1 incluye el template
+            
+            // Calcular posición en grid (índice empieza en 0 para el template, 1 para el segundo rectángulo)
+            const gridIndex = this.rectCounter - 1; // Índice del rectángulo actual (template es 0)
+            const row = Math.floor(gridIndex / maxRectsPerRow);
+            const col = gridIndex % maxRectsPerRow;
+            
+            // Posicionar en el grid
+            left = startX + col * rectWithSpacing;
+            top = startY + row * (height + spacing);
+            
+            console.log(`📐 Grid positioning: rect ${this.rectCounter}, grid(${row},${col}), pos(${Math.round(left)},${Math.round(top)}), maxPerRow=${maxRectsPerRow}`);
         }
         
         const rect = new fabric.Rect({
