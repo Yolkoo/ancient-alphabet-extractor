@@ -78,6 +78,27 @@ class LetterExtractor {
         this.init();
     }
 
+    // Función helper para generar nombres de archivo limpios
+    getCleanImageName(file = null) {
+        let imageName = '';
+        
+        if (file) {
+            imageName = file.name;
+        } else {
+            const imageInput = document.getElementById('imageInput');
+            if (imageInput && imageInput.files[0]) {
+                imageName = imageInput.files[0].name;
+            }
+        }
+        
+        // Remover extensión y caracteres especiales
+        return imageName
+            .replace(/\.[^/.]+$/, '') // Remover extensión
+            .replace(/[^a-zA-Z0-9_-]/g, '_') // Reemplazar caracteres especiales con _
+            .replace(/_+/g, '_') // Reemplazar múltiples _ con uno solo
+            .replace(/^_|_$/g, ''); // Remover _ al inicio y final
+    }
+
     init() {
         // Inicializar canvas de Fabric.js
         this.canvas = new fabric.Canvas('canvas', {
@@ -1105,9 +1126,16 @@ class LetterExtractor {
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         
+        // Generar nombre de archivo más descriptivo con el nombre de la imagen
+        const cleanImageName = this.getCleanImageName();
+        const timestamp = new Date().getTime();
+        const fileName = cleanImageName 
+            ? `${cleanImageName}_coordinates_${timestamp}.json`
+            : `alphabet_letters_${timestamp}.json`;
+        
         const a = document.createElement('a');
         a.href = url;
-        a.download = `alphabet_letters_${new Date().getTime()}.json`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1179,15 +1207,26 @@ class LetterExtractor {
                 }))
             };
 
-            zip.file('metadata.json', JSON.stringify(metadata, null, 2));
+            // Generar nombres de archivo más descriptivos con el nombre de la imagen
+            const cleanImageName = this.getCleanImageName();
+            const timestamp = new Date().getTime();
+            const metadataFileName = cleanImageName 
+                ? `${cleanImageName}_metadata.json`
+                : 'metadata.json';
+
+            zip.file(metadataFileName, JSON.stringify(metadata, null, 2));
 
             // Generar y descargar el ZIP
             const zipBlob = await zip.generateAsync({type: 'blob'});
             const url = URL.createObjectURL(zipBlob);
             
+            const zipFileName = cleanImageName 
+                ? `${cleanImageName}_extracted_alphabet_${timestamp}.zip`
+                : `extracted_alphabet_${timestamp}.zip`;
+            
             const a = document.createElement('a');
             a.href = url;
-            a.download = `extracted_alphabet_${new Date().getTime()}.zip`;
+            a.download = zipFileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
