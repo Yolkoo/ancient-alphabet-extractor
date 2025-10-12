@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Letter Extractor - Selecciona Regiones</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📜 Ancient Alphabet Extractor</h1>
+            <p>Extrae letras individuales de alfabetos antiguos para crear pinceles de Procreate y fuentes TTF</p>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+        </header>
+
+        <div class="main-layout">
+            <div class="controls-sidebar">
+                <div class="control-group">
+                    <label for="imageInput" class="btn btn-primary">
+                        📚 Cargar Alfabeto
+                        <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                    </label>
+                </div>
+                
+                <div class="control-group">
+                    <button id="addRectBtn" class="btn btn-secondary" disabled>🔤 Añadir Letra</button>
+                    <button id="generateGridBtn" class="btn btn-success" disabled>⚡ Generar Grid A-Z</button>
+                    <button id="deleteSelectedBtn" class="btn btn-danger" disabled>🗑️ Borrar Letra</button>
+                    <button id="resetRectBtn" class="btn btn-warning" disabled>🔧 Reset Letra</button>
+                </div>
+                
+                <div class="control-group">
+                    <button id="saveJsonBtn" class="btn btn-success" disabled>💾 Exportar Coordenadas</button>
+                    <button id="processImageBtn" class="btn btn-primary" disabled>✂️ Extraer Letras</button>
+                    <button id="clearAllBtn" class="btn btn-warning" disabled>🧹 Limpiar Todo</button>
+                </div>
+
+                <div class="alphabet-controls">
+                    <label>
+                        Secuencia de nombres:
+                        <select id="alphabetType">
+                            <optgroup label="Alfabetos Modernos">
+                                <option value="uppercase">Mayúsculas (A-Z)</option>
+                                <option value="lowercase">Minúsculas (a-z)</option>
+                                <option value="numbers">Números (0-9)</option>
+                                <option value="mixed">Mixto (A-Z, a-z, 0-9)</option>
+                            </optgroup>
+                            <optgroup label="Alfabetos Históricos">
+                                <option value="hebrew">Hebreo (א-ת) - Alefato</option>
+                                <option value="hebrew_latin">Hebreo Transliterado (Aleph-Tav)</option>
+                                <option value="greek">Griego (Α-Ω)</option>
+                                <option value="latin_classical">Latín Clásico (I=J, U=V)</option>
+                            </optgroup>
+                            <optgroup label="Alfabetos de Tritemius">
+                                <option value="tritemius_hebrew">Tritemius Hebreo</option>
+                                <option value="tritemius_hebrew_latin">Tritemius Hebreo (Latino)</option>
+                                <option value="tritemius_chaldean">Tritemius Caldeo</option>
+                                <option value="tritemius_celestial">Tritemius Celestial</option>
+                            </optgroup>
+                            <optgroup label="Personalizado">
+                                <option value="custom">Personalizado</option>
+                            </optgroup>
+                        </select>
+                    </label>
+                    
+                    <label>
+                        Formato de nombres:
+                        <select id="namingFormat">
+                            <option value="numbered">Con número: 01_A, 02_B...</option>
+                            <option value="simple">Simple: A, B, C...</option>
+                            <option value="descriptive">Descriptivo: 01_Aleph, 02_Beth...</option>
+                        </select>
+                    </label>
+                    
+                    <label>
+                        Sufijo descriptivo:
+                        <input type="text" id="suffixInput" placeholder="ej: Tritemius, Hebrew, Gothic" value="">
+                        <small>Se combinará con el nombre de la imagen</small>
+                    </label>
+                    
+                    <label>
+                        <input type="checkbox" id="autoPrefixCheck" checked> 
+                        Generar prefijo automático: "NombreImagen_Sufijo_extracted"
+                    </label>
+                    
+                    <label>
+                        Prefijo manual (si automático está desactivado):
+                        <input type="text" id="namePrefix" placeholder="Ej: Gothic_extracted_" value="" disabled>
+                    </label>
+                    <button id="resetSequenceBtn" class="btn btn-info btn-small">🔄 Reiniciar Secuencia</button>
+                </div>
+            </div>
+
+            <div class="canvas-area">
+                <div class="canvas-container">
+                    <canvas id="canvas"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="info-panel">
+            <h3>📝 Letras Extraídas:</h3>
+            <div id="rectanglesList"></div>
+            
+            <div class="selected-info" id="selectedInfo" style="display: none;">
+                <h4>🔤 Letra Seleccionada:</h4>
+                <label>
+                    Carácter/Nombre: 
+                    <input type="text" id="selectedName" placeholder="ej: A, Alpha, А...">
+                </label>
+                <div class="coordinates">
+                    <span>X: <span id="selectedX">0</span></span>
+                    <span>Y: <span id="selectedY">0</span></span>
+                    <span>Ancho: <span id="selectedWidth">0</span></span>
+                    <span>Alto: <span id="selectedHeight">0</span></span>
+                </div>
+                <div class="letter-info">
+                    <label>
+                        Unicode:
+                        <input type="text" id="selectedUnicode" placeholder="U+0041">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
