@@ -601,28 +601,21 @@ class LetterExtractor {
 
         this.rectangles.push(rect);
         
-        // Si es el primer rectángulo, establecerlo como template SIN llamar a setAsTemplate
+        // Si es el primer rectángulo, establecerlo como template de manera simple
         if (!this.templateRectangle) {
             this.templateRectangle = rect;
             this.detectImageOrientation();
-            
             this.updateTemplateInfo();
-            console.log('✅ Template establecido - Primera letra totalmente editable');
+            console.log('✅ Template establecido - Primera letra completamente editable');
+            
+            // NO modificar ninguna propiedad del rectángulo, mantenerlo exactamente como se creó
         }
         
         this.updateRectanglesList();
         this.handleSelection(rect);
         
-        // Debug log
         console.log(`✅ Rectángulo creado: ${letterName} en (${left}, ${top}) - ${width}x${height}`);
-        console.log('🔍 Propiedades del rectángulo:', {
-            selectable: rect.selectable,
-            evented: rect.evented,
-            hasControls: rect.hasControls,
-            hasBorders: rect.hasBorders
-        });
-        
-        this.showMessage(`Rectángulo "${letterName}" añadido - Puedes moverlo y redimensionarlo`, 'success');
+        this.showMessage(`Rectángulo "${letterName}" añadido - Totalmente editable`, 'success');
     }
 
     deleteSelected() {
@@ -843,14 +836,81 @@ class LetterExtractor {
             return;
         }
 
-        console.log(`🔤 Generando ${lettersToGenerate} rectángulos adicionales...`);
+        console.log(`🔤 Generando ${lettersToGenerate} rectángulos automáticamente...`);
         
-        // Generar los rectángulos restantes
+        // Generar todos los rectángulos de una vez sin clicks individuales
+        const template = this.templateRectangle;
+        const width = template.width * template.scaleX;
+        const height = template.height * template.scaleY;
+        
+        // Obtener información de la imagen
+        const imgWidth = this.backgroundImage.width * this.backgroundImage.scaleX;
+        const imgHeight = this.backgroundImage.height * this.backgroundImage.scaleY;
+        const imgLeft = this.backgroundImage.left;
+        const imgTop = this.backgroundImage.top;
+        
+        // Configuración de espaciado
+        const horizontalSpacing = 0;
+        const verticalSpacing = 10;
+        const rectWithSpacing = width + horizontalSpacing;
+        const rectHeightWithSpacing = height + verticalSpacing;
+        const rectsPerRow = Math.floor((imgWidth - width) / rectWithSpacing) + 1;
+        
+        // Generar todos los rectángulos restantes
         for (let i = 0; i < lettersToGenerate; i++) {
-            this.addRectangle();
+            this.rectCounter++;
+            const letterName = this.getNextLetterName();
+            
+            // Calcular posición en grid
+            const gridIndex = this.rectCounter - 1;
+            const row = Math.floor(gridIndex / rectsPerRow);
+            const col = gridIndex % rectsPerRow;
+            
+            const left = template.left + col * rectWithSpacing;
+            const top = template.top + row * rectHeightWithSpacing;
+            
+            // Verificar que no se salga de la imagen
+            const rightEdge = left + width;
+            const bottomEdge = top + height;
+            const imgRightEdge = imgLeft + imgWidth;
+            const imgBottomEdge = imgTop + imgHeight;
+            
+            const finalLeft = Math.min(left, imgRightEdge - width);
+            const finalTop = Math.min(top, imgBottomEdge - height);
+            
+            // Crear rectángulo
+            const rect = new fabric.Rect({
+                left: finalLeft,
+                top: finalTop,
+                width: width,
+                height: height,
+                fill: 'rgba(0, 255, 0, 0.3)', // Verde para rectángulos generados
+                stroke: '#00ff00', // Verde
+                strokeWidth: 3,
+                cornerSize: 12,
+                selectable: true,
+                evented: true,
+                hasControls: true,
+                hasBorders: true,
+                hasRotatingPoint: false
+            });
+
+            // Configurar datos
+            rect.set({
+                id: `letter_${this.rectCounter}`,
+                customName: letterName,
+                unicode: this.getUnicodeForLetter(letterName.replace(document.getElementById('namePrefix').value, ''))
+            });
+
+            this.canvas.add(rect);
+            this.rectangles.push(rect);
         }
         
-        alert(`✅ Grid generado: ${this.rectangles.length} rectángulos para ${alphabet.substring(0, this.rectangles.length)}`);
+        this.canvas.renderAll();
+        this.updateRectanglesList();
+        
+        alert(`✅ Grid generado automáticamente: ${this.rectangles.length} rectángulos total`);
+        console.log(`✅ Grid completo: ${this.rectangles.length} rectángulos creados`);
     }
 
     // Nueva función: Obtener alfabeto actual
