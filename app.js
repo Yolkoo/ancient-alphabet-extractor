@@ -1009,12 +1009,19 @@ class LetterExtractor {
             templateInfo.className = 'template-info';
             
             const sidebar = document.querySelector('.controls-sidebar');
-            const generateBtn = document.getElementById('generateGridBtn');
-            if (generateBtn && sidebar) {
-                sidebar.insertBefore(templateInfo, generateBtn);
-            } else if (sidebar) {
-                // Si no hay botón de grid, agregar al final de la sidebar
-                sidebar.appendChild(templateInfo);
+            if (sidebar) {
+                const generateBtn = document.getElementById('generateGridBtn');
+                if (generateBtn && generateBtn.parentNode === sidebar) {
+                    // Solo usar insertBefore si el botón es hijo directo de la sidebar
+                    sidebar.insertBefore(templateInfo, generateBtn);
+                } else {
+                    // Insertar al final de la sidebar si no encontramos el botón o no es hijo directo
+                    sidebar.appendChild(templateInfo);
+                }
+            } else {
+                // Si no hay sidebar, crear mensaje de advertencia en consola pero no fallar
+                console.warn('No se encontró la sidebar para mostrar información del template');
+                return;
             }
         }
         
