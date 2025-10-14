@@ -42,19 +42,12 @@ class LetterExtractor {
             uppercase: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ',
             lowercase: 'abcdefghijklmnopqrstuvwxyz',
             numbers: '0123456789',
-            mixed: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789',
             
             // Alfabetos históricos
-            hebrew: 'אבגדהוזחטיכלמנסעפצקרשת', // Alefato hebreo (22 letras)
+            hebrew: '\u05d0\u05d1\u05d2\u05d3\u05d4\u05d5\u05d6\u05d7\u05d8\u05d9\u05db\u05dc\u05de\u05e0\u05e1\u05e2\u05e4\u05e6\u05e7\u05e8\u05e9\u05ea', // Alefato hebreo (22 letras)
             hebrew_latin: 'ABGDHVZHTYKLMNSPTSQRST', // Transliteración latina del hebreo
-            greek: 'ΑΒΓΔΕΖΗΘΙΚΛΜΝΞΟΠΡΣΤΥΦΧΨΩ', // Griego clásico (24 letras)
+            greek: '\u0391\u0392\u0393\u0394\u0395\u0396\u0397\u0398\u0399\u039a\u039b\u039c\u039d\u039e\u039f\u03a0\u03a1\u03a3\u03a4\u03a5\u03a6\u03a7\u03a8\u03a9', // Griego clásico (24 letras)
             latin_classical: 'ABCDEFGHIKLMNOPQRSTVXYZ', // Latín sin J ni U (23 letras)
-            
-            // Alfabetos de Tritemius (basados en hebreo pero con variaciones gráficas)
-            tritemius_hebrew: 'אבגדהוזחטיכלמנסעפצקרשת',
-            tritemius_hebrew_latin: 'ABGDHVZHTYKLMNSPTSQRST', // Versión latina para mejor visualización
-            tritemius_chaldean: 'אבגדהוזחטיכלמנסעפצקרשת', // Mismo orden, diferentes glifos
-            tritemius_celestial: 'אבגדהוזחטיכלמנסעפצקרשת', // Mismo orden, glifos celestiales
             
             custom: ''
         };
@@ -327,7 +320,7 @@ class LetterExtractor {
 
         // Esta función podría usar análisis de imagen para detectar automáticamente letras
         // Por ahora, crear una cuadrícula sugerida
-        alert('🤖 Auto-detección en desarrollo. Por ahora, usa "🔤 Añadir Letra" para crear regiones manualmente.');
+        console.log('Auto-detección en desarrollo. Usa "Añadir Letra" para crear regiones manualmente.');
     }
 
     getNextLetterName() {
@@ -548,9 +541,14 @@ class LetterExtractor {
             const startX = this.templateRectangle.left;
             const startY = this.templateRectangle.top;
             
-            left = startX + col * rectWithSpacing;
-            top = startY + row * rectHeightWithSpacing;
-            
+            // Ajustar posición según el tipo de alfabeto
+            const alphabetType = document.getElementById('alphabetType').value; // Obtener tipo de alfabeto
+            const isHebrew = alphabetType === 'hebrew';
+            const left = isHebrew
+                ? template.left - col * rectWithSpacing // Derecha a izquierda
+                : template.left + col * rectWithSpacing; // Izquierda a derecha
+            const top = template.top + row * rectHeightWithSpacing;
+
             // ✅ VERIFICAR QUE NO SE SALGA DE LA IMAGEN
             const rightEdge = left + width;
             const bottomEdge = top + height;
@@ -606,14 +604,10 @@ class LetterExtractor {
             this.templateRectangle = rect;
             this.detectImageOrientation();
             this.updateTemplateInfo();
-            console.log('✅ Template establecido - Primer rectángulo completamente funcional');
         }
         
         this.updateRectanglesList();
         this.handleSelection(rect);
-        
-        console.log(`✅ Rectángulo creado: ${letterName} - Posición: (${left}, ${top}) - Tamaño: ${width}x${height}`);
-        this.showMessage(`Rectángulo "${letterName}" añadido - Completamente editable`, 'success');
     }
 
     deleteSelected() {
@@ -801,11 +795,6 @@ class LetterExtractor {
         
         // Actualizar información del template en la UI
         this.updateTemplateInfo();
-        
-        const width = Math.round(rect.width * rect.scaleX);
-        const height = Math.round(rect.height * rect.scaleY);
-        console.log('✅ Template establecido - Propiedades mantenidas');
-        this.showMessage(`Template establecido: ${width} × ${height} px`, 'success');
     }
 
     // Nueva función: Detectar orientación de la imagen
@@ -856,15 +845,20 @@ class LetterExtractor {
         for (let i = 0; i < lettersToGenerate; i++) {
             this.rectCounter++;
             const letterName = this.getNextLetterName();
-            
+
             // Calcular posición en grid
             const gridIndex = this.rectCounter - 1;
             const row = Math.floor(gridIndex / rectsPerRow);
             const col = gridIndex % rectsPerRow;
-            
-            const left = template.left + col * rectWithSpacing;
+
+            // Ajustar posición para escritura de derecha a izquierda (Hebreo)
+            const alphabetType = document.getElementById('alphabetType').value; // Obtener tipo de alfabeto
+            const isHebrew = alphabetType === 'hebrew';
+            const left = isHebrew
+                ? template.left - col * rectWithSpacing // Derecha a izquierda
+                : template.left + col * rectWithSpacing; // Izquierda a derecha
             const top = template.top + row * rectHeightWithSpacing;
-            
+
             // Crear rectángulo directamente sin llamar addRectangle
             const rect = new fabric.Rect({
                 left: left,
@@ -980,9 +974,6 @@ class LetterExtractor {
     updateTemplate(rect) {
         const width = Math.round(rect.width * rect.scaleX);
         const height = Math.round(rect.height * rect.scaleY);
-        
-        // Mostrar información del template actualizada
-        this.showMessage(`Template actualizado: ${width} × ${height} px`, 'info');
         
         // Actualizar la información del template en la interfaz
         this.updateTemplateInfo();
@@ -1105,7 +1096,8 @@ class LetterExtractor {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `alphabet_letters_${new Date().getTime()}.json`;
+        const imageName = this.backgroundImage?.name?.split('.')[0] || 'image';
+        a.download = `${imageName}_letters_${new Date().getTime()}.json`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1157,7 +1149,7 @@ class LetterExtractor {
             processBtn.textContent = '⏳ Procesando...';
             processBtn.disabled = true;
 
-            const response = await fetch('http://localhost:5004/process', {
+            const response = await fetch('http://127.0.0.1:5000/process', {
                 method: 'POST',
                 body: formData
             });

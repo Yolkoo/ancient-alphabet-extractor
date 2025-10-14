@@ -158,8 +158,10 @@ def process_image():
                     continue
 
             # Añadir el archivo JSON con información al ZIP
+            image_name = request.files['image'].filename.rsplit('.', 1)[0]
+            json_filename = f"{image_name}_letters_info.json"
             json_data = json.dumps(letters_info, indent=2, ensure_ascii=False)
-            zip_file.writestr('letters_info.json', json_data.encode('utf-8'))
+            zip_file.writestr(json_filename, json_data.encode('utf-8'))
 
         # Preparar el archivo para envío
         zip_buffer.seek(0)

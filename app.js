@@ -327,7 +327,7 @@ class LetterExtractor {
 
         // Esta función podría usar análisis de imagen para detectar automáticamente letras
         // Por ahora, crear una cuadrícula sugerida
-        alert('🤖 Auto-detección en desarrollo. Por ahora, usa "🔤 Añadir Letra" para crear regiones manualmente.');
+        console.log('Auto-detección en desarrollo. Usa "Añadir Letra" para crear regiones manualmente.');
     }
 
     getNextLetterName() {

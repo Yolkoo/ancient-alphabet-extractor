@@ -6,25 +6,25 @@
 }
 
 :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f5;
-    --text-primary: #333333;
-    --text-secondary: #666666;
-    --border-color: #dddddd;
-    --shadow: 0 2px 10px rgba(0,0,0,0.1);
-    --accent-color: #007acc;
-    --accent-hover: #0056b3;
+    --bg-primary: #ffffff; /* White */
+    --bg-secondary: #f0f0f0; /* Light Gray */
+    --text-primary: #000000; /* Black */
+    --text-secondary: #4d4d4d; /* Dark Gray */
+    --border-color: #bfbfbf; /* Medium Gray */
+    --shadow: 0 2px 10px rgba(0, 0, 0, 0.2); /* Subtle Shadow */
+    --accent-color: #808080; /* Neutral Gray */
+    --accent-hover: #666666; /* Darker Gray */
 }
 
 [data-theme="dark"] {
-    --bg-primary: #1e1e1e;
-    --bg-secondary: #252526;
-    --text-primary: #cccccc;
-    --text-secondary: #969696;
-    --border-color: #404040;
-    --shadow: 0 2px 10px rgba(0,0,0,0.3);
-    --accent-color: #0078d4;
-    --accent-hover: #106ebe;
+    --bg-primary: #000000; /* Black */
+    --bg-secondary: #1a1a1a; /* Very Dark Gray */
+    --text-primary: #ffffff; /* White */
+    --text-secondary: #b3b3b3; /* Light Gray */
+    --border-color: #4d4d4d; /* Dark Gray */
+    --shadow: 0 2px 10px rgba(255, 255, 255, 0.2); /* Subtle Light Shadow */
+    --accent-color: #808080; /* Neutral Gray */
+    --accent-hover: #999999; /* Lighter Gray */
 }
 
 /* Estilos base */
@@ -469,6 +469,31 @@ header p {
     .controls-sidebar {
         width: 100%;
         padding: 15px;
+    }
+}
+
+/* Viewport adjustments for iPad */
+@media screen and (min-width: 768px) and (max-width: 1024px) {
+    .main-layout {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+
+    .controls-sidebar {
+        width: 250px; /* Adjusted width for better visibility */
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .canvas-area {
+        flex: 1;
+        margin-left: 20px;
+    }
+
+    .btn {
+        font-size: 16px; /* Slightly larger buttons for touch usability */
     }
 }
 
