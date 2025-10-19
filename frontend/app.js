@@ -1,4 +1,10 @@
+// Cambio menor para activar la reconstrucción en Render
+// Última actualización: 19 de octubre de 2025
+
 console.log('%cArchivo app.js cargado correctamente.', 'color: green; font-size: 16px;');
+
+// Cambiar la URL del backend a la URL pública de Render
+const BACKEND_URL = 'https://<tu-backend-en-render>.onrender.com';
 
 // Función para cambiar el tema
 function toggleTheme() {
@@ -1133,7 +1139,7 @@ class LetterExtractor {
             processBtn.textContent = '⏳ Procesando...';
             processBtn.disabled = true;
 
-            const response = await fetch('http://127.0.0.1:5000/process', {
+            const response = await fetch(`${BACKEND_URL}/process`, {
                 method: 'POST',
                 body: formData
             });
@@ -1280,7 +1286,7 @@ class LetterExtractor {
         formData.append('file', file);
 
         try {
-            const response = await fetch('http://localhost:5001/upload-json', {
+            const response = await fetch(`${BACKEND_URL}/upload-json`, {
                 method: 'POST',
                 body: formData
             });

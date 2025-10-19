@@ -8,7 +8,7 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:8000"}})  # Permitir requests desde el frontend
+CORS(app, resources={r"/*": {"origins": "*"}})  # Permitir requests desde cualquier origen
 
 @app.route('/')
 def index():
@@ -217,13 +217,5 @@ def upload_json():
         return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Usa el puerto de la variable de entorno o 5000 por defecto
-    print("🚀 Iniciando Ancient Alphabet Extractor API...")
-    print("📡 Servidor disponible en: http://localhost:" + str(port))
-    print("🔄 Endpoints disponibles:")
-    print("   GET  /health - Verificar estado")
-    print("   POST /process - Extraer letras")
-    print("   POST /upload-json - Cargar archivos JSON")
-    print("\n💡 Enfocado en extracción rápida y precisa sin post-procesamiento")
-
-    app.run(debug=True, host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)  # Modo debug deshabilitado para producción
