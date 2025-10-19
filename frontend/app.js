@@ -1,3 +1,5 @@
+console.log('%cArchivo app.js cargado correctamente.', 'color: green; font-size: 16px;');
+
 // Función para cambiar el tema
 function toggleTheme() {
     const body = document.body;
@@ -69,6 +71,7 @@ class LetterExtractor {
         this.imageOrientation = 'horizontal'; // 'horizontal' o 'vertical'
         
         this.init();
+        console.log('LetterExtractor inicializado.');
     }
 
     init() {
@@ -105,6 +108,9 @@ class LetterExtractor {
         
         // Inicializar controles de prefijo
         this.togglePrefixInputs();
+        
+        // Llamar explícitamente a setupJSONUpload desde el constructor
+        this.setupJSONUpload();
     }
 
     setupEventListeners() {
@@ -253,38 +259,13 @@ class LetterExtractor {
     loadImage(file) {
         if (!file) return;
 
-        // Guardar el nombre de la imagen para prefijo automático
-        this.currentImageName = file.name;
-        this.updateAutoPrefix();
-
         const reader = new FileReader();
         reader.onload = (e) => {
-            const imgElement = new Image();
-            imgElement.onload = () => {
-                // Limpiar canvas
-                this.clearAll();
-
-                // Crear imagen de fondo
-                const fabricImage = new fabric.Image(imgElement, {
-                    selectable: false,
-                    evented: false,
-                    centeredScaling: true,
-                    excludeFromExport: false,
-                    absolutePositioned: true
-                });
-
-                // Ajustar tamaño del canvas a la imagen
-                const maxWidth = 800;
-                const maxHeight = 600;
-                const scale = Math.min(maxWidth / imgElement.width, maxHeight / imgElement.height);
-                
-                const scaledWidth = imgElement.width * scale;
-                const scaledHeight = imgElement.height * scale;
-
-                this.canvas.setDimensions({
-                    width: scaledWidth,
-                    height: scaledHeight
-                });
+            fabric.Image.fromURL(e.target.result, (fabricImage) => {
+                const scale = Math.min(
+                    this.canvas.width / fabricImage.width,
+                    this.canvas.height / fabricImage.height
+                );
 
                 fabricImage.scale(scale);
                 fabricImage.set({
@@ -294,7 +275,8 @@ class LetterExtractor {
 
                 this.canvas.add(fabricImage);
                 this.backgroundImage = fabricImage;
-                
+                this.currentImageName = file.name.split('.')[0]?.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
                 // Asegurar que el canvas esté configurado correctamente después de cargar imagen
                 this.canvas.selection = true;
                 this.canvas.interactive = true;
@@ -309,8 +291,7 @@ class LetterExtractor {
                 // Habilitar controles
                 this.enableControls();
                 this.updateSequenceInfo();
-            };
-            imgElement.src = e.target.result;
+            });
         };
         reader.readAsDataURL(file);
     }
@@ -1093,11 +1074,14 @@ class LetterExtractor {
 
         const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
-        
+
+        const alphabetType = document.getElementById('alphabetType').value || 'unknown';
+        const namePrefix = document.getElementById('namePrefix').value || '';
+        const fileName = `${namePrefix}_${this.currentImageName || 'image'}_${alphabetType}.json`.replace(/^_/, '');
+
         const a = document.createElement('a');
         a.href = url;
-        const imageName = this.backgroundImage?.name?.split('.')[0] || 'image';
-        a.download = `${imageName}_letters_${new Date().getTime()}.json`;
+        a.download = fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
@@ -1160,7 +1144,10 @@ class LetterExtractor {
                 
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = `extracted_regions_${new Date().getTime()}.zip`;
+                const alphabetType = document.getElementById('alphabetType').value || 'unknown';
+                const namePrefix = document.getElementById('namePrefix').value || '';
+                const zipFileName = `${namePrefix}_${this.currentImageName || 'image'}_${alphabetType}.zip`.replace(/^_/, '');
+                a.download = zipFileName;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -1285,6 +1272,60 @@ class LetterExtractor {
         document.getElementById('processImageBtn').disabled = true;
         document.getElementById('clearAllBtn').disabled = true;
     }
+
+    // Función para cargar un archivo JSON
+    async uploadJSON(file) {
+        console.log('Iniciando carga de JSON:', file);
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('http://localhost:5001/upload-json', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                alert(`Error al cargar JSON: ${errorData.error}`);
+                return;
+            }
+
+            const result = await response.json();
+            console.log('JSON cargado con éxito:', result);
+            alert('Archivo JSON cargado con éxito');
+        } catch (error) {
+            console.error('Error al cargar el archivo JSON:', error);
+            alert('Error al cargar el archivo JSON');
+        }
+    }
+
+    // Agregar evento para cargar JSON desde un input file
+    setupJSONUpload() {
+        const fileInput = document.getElementById('json-upload');
+        if (fileInput) {
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    console.log('Archivo seleccionado:', file);
+                    this.uploadJSON(file);
+                }
+            });
+        } else {
+            console.error('El input json-upload no está disponible en el DOM.');
+        }
+
+        // Verificar si el input está disponible
+        if (!fileInput) {
+            console.error('El input json-upload no está disponible en el DOM.');
+            return;
+        }
+
+        console.log('Ejecutando setupJSONUpload');
+        console.log('Input JSON:', fileInput);
+        console.log('setupJSONUpload: Verificando disponibilidad del input json-upload');
+        console.log('setupJSONUpload: Configurando evento change para json-upload');
+    }
 }
 
 // Inicializar la aplicación cuando se carga la página
@@ -1307,3 +1348,16 @@ document.addEventListener('touchend', function(event) {
     }
     lastTouchEnd = now;
 }, false);
+
+// Script mínimo para probar el evento change del input json-upload
+document.addEventListener('DOMContentLoaded', () => {
+    const fileInput = document.getElementById('json-upload');
+    if (fileInput) {
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            console.log('Archivo seleccionado en script mínimo:', file);
+        });
+    } else {
+        console.error('El input json-upload no está disponible en el DOM.');
+    }
+});

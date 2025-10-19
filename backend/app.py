@@ -8,7 +8,7 @@ import os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # Permitir requests desde el frontend
+CORS(app, resources={r"/*": {"origins": "http://localhost:8000"}})  # Permitir requests desde el frontend
 
 @app.route('/')
 def index():
@@ -18,7 +18,8 @@ def index():
         "description": "Extracción rápida y precisa de letras de alfabetos antiguos",
         "endpoints": {
             "/process": "POST - Extraer letras sin post-procesamiento",
-            "/health": "GET - Verificar estado del servidor"
+            "/health": "GET - Verificar estado del servidor",
+            "/upload-json": "POST - Cargar archivos JSON"
         }
     })
 
@@ -157,18 +158,26 @@ def process_image():
                     print(f"Error procesando letra {i+1}: {str(e)}")
                     continue
 
+            # Asignar un valor inicial a image_name
+            image_name = image_file.filename.rsplit('.', 1)[0].lower().replace(' ', '_') if image_file.filename else 'default_image_name'
+
+            # Depuración: Verificar valores de las variables
+            print(f"name_prefix: {name_prefix}")
+            print(f"image_name: {image_name}")
+            print(f"alphabet_type: {alphabet_type}")
+
             # Añadir el archivo JSON con información al ZIP
-            image_name = request.files['image'].filename.rsplit('.', 1)[0]
-            json_filename = f"{image_name}_letters_info.json"
+            json_filename = f"{name_prefix}_{image_name}_{alphabet_type}.json".replace('__', '_')
             json_data = json.dumps(letters_info, indent=2, ensure_ascii=False)
             zip_file.writestr(json_filename, json_data.encode('utf-8'))
 
         # Preparar el archivo para envío
         zip_buffer.seek(0)
-        
-        # Crear nombre de archivo único
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"extracted_letters_{timestamp}.zip"
+
+        # Crear nombre descriptivo para el ZIP
+        filename = f"{name_prefix}_{image_name}_{alphabet_type}.zip".replace('__', '_')
+
+        print(f"ZIP filename: {filename}")  # Depuración: Verificar nombre del ZIP
 
         return send_file(
             io.BytesIO(zip_buffer.getvalue()),
@@ -181,12 +190,40 @@ def process_image():
         print(f"Error general: {str(e)}")
         return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
 
+@app.route('/upload-json', methods=['POST'])
+def upload_json():
+    try:
+        # Verificar que se envió un archivo JSON
+        if 'file' not in request.files:
+            return jsonify({"error": "No se envió ningún archivo"}), 400
+
+        json_file = request.files['file']
+        if json_file.filename == '':
+            return jsonify({"error": "No se seleccionó ningún archivo"}), 400
+
+        # Cargar y validar el contenido del archivo JSON
+        try:
+            data = json.load(json_file)
+        except json.JSONDecodeError:
+            return jsonify({"error": "El archivo no es un JSON válido"}), 400
+
+        # Procesar los datos del JSON (aquí puedes agregar lógica específica)
+        print("Datos cargados:", data)
+
+        return jsonify({"message": "Archivo JSON cargado y procesado con éxito"}), 200
+
+    except Exception as e:
+        print(f"Error general: {str(e)}")
+        return jsonify({"error": f"Error interno del servidor: {str(e)}"}), 500
+
 if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 5000))  # Usa el puerto de la variable de entorno o 5000 por defecto
     print("🚀 Iniciando Ancient Alphabet Extractor API...")
-    print("📡 Servidor disponible en: http://localhost:5001")
+    print("📡 Servidor disponible en: http://localhost:" + str(port))
     print("🔄 Endpoints disponibles:")
     print("   GET  /health - Verificar estado")
     print("   POST /process - Extraer letras")
+    print("   POST /upload-json - Cargar archivos JSON")
     print("\n💡 Enfocado en extracción rápida y precisa sin post-procesamiento")
-    
-    app.run(debug=True, host='0.0.0.0', port=5004)
+
+    app.run(debug=True, host='0.0.0.0', port=port)
