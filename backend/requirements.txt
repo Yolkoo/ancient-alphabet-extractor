@@ -4,3 +4,4 @@ Pillow>=10.1.0
 Werkzeug>=2.3.7
 numpy>=1.24.0
 marshmallow
+flasgger
